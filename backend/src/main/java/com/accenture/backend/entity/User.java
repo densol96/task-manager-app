@@ -1,4 +1,4 @@
-package com.accenture.backend.entities;
+package com.accenture.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -18,10 +18,10 @@ public class User {
 
     @Column(name = "user_id")
     private Long userId;
+    private String email;
 
     @Column(name = "first_name")
     private String firstName;
-
     @Column(name = "last_name")
     private String lastName;
     private String password;
