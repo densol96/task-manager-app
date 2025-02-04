@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  database:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: project_database
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3307:3306"
+    volumes:
+      - database_data:/var/lib/mysql
+
+volumes:
+  database_data:
