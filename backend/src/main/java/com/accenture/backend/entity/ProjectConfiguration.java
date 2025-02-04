@@ -33,4 +33,14 @@ public class ProjectConfiguration {
         this.maxParticipants = maxParticipants;
         this.backgroundImage = backgroundImage;
     }
+
+    @PrePersist
+    public void prePersist() {
+        if (isPublic == null) {
+            isPublic = true;
+        }
+        if (maxParticipants == null) {
+            maxParticipants = 10;
+        }
+    }
 }
