@@ -1,9 +1,7 @@
 package com.accenture.backend.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import com.accenture.backend.model.Role;
 
@@ -12,7 +10,9 @@ import java.sql.Timestamp;
 @Getter
 @Setter
 @Entity
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "users")
 public class User {
 

@@ -1,6 +1,7 @@
 package com.accenture.backend.model;
 
 import com.accenture.backend.dto.LoginDto;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Data
+@AllArgsConstructor
 public class SecurityUser implements UserDetails {
 
     private LoginDto loginDto;
