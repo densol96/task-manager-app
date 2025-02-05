@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-
   mysqldb:
     image: "mysql:8.0"
     restart: always
@@ -13,6 +10,7 @@ services:
       MYSQL_DATABASE: task-manager
       MYSQL_USER: Admin
       MYSQL_PASSWORD: strong_password
+      MYSQL_ROOT_PASSWORD: root_password
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uAdmin", "-pstrong_password"]
       interval: 10s

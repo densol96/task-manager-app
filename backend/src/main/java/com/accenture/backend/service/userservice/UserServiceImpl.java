@@ -23,15 +23,17 @@ public class UserServiceImpl implements UserService {
 
         log.info("Loading user by email: {}", email);
 
-        LoginDto loginDto = userRepository.findUserByEmail(email)
-                .map(userMapper::toLoginDto)
-                .orElseThrow(() -> {
-                    log.error("User with email: {} was not found", email);
-                    return new UsernameNotFoundException("Username not found");
-                });
+//        LoginDto loginDto = userRepository.findUserByEmail(email)
+//                .map(userMapper::toLoginDto)
+//                .orElseThrow(() -> {
+//                    log.error("User with email: {} was not found", email);
+//                    return new UsernameNotFoundException("Username not found");
+//                });
 
         log.info("User with email: {} is found", email);
 
-        return new SecurityUser(loginDto);
+//        return new SecurityUser(loginDto);
+
+        return new SecurityUser(new LoginDto());
     }
 }
