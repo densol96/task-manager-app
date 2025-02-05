@@ -1,6 +1,9 @@
 package com.accenture.backend.service.project;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import com.accenture.backend.dto.request.*;
 import com.accenture.backend.dto.response.*;
@@ -15,4 +18,20 @@ public interface ProjectService {
     BasicNestedResponseDto<ProjectDto> updateExistingProject(Long projectId, AcceptProjectDto dto);
 
     BasicMessageDto deleteProject(Long projectId);
+
+    BasicMessageDto makeProjectApplication(Long projectId, CommentDto dto);
+
+    BasicMessageDto makeProjectInvitation(Long projectId, InvitationDto dto);
+
+    BasicMessageDto acceptApplication(Long applicationId);
+
+    BasicMessageDto declineApplication(Long applicationId);
+
+    BasicMessageDto acceptInvitation(Long invitationId);
+
+    BasicMessageDto declineInvitation(Long invitationId);
+
+    List<InteractionInvitationDto> getUserInvitations();
+
+    List<ApplicationDto> getProjectApplications(Long projectId);
 }

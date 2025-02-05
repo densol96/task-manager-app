@@ -3,6 +3,8 @@ package com.accenture.backend.service.project;
 import java.util.*;
 
 import com.accenture.backend.dto.request.AcceptProjectDto;
+import com.accenture.backend.dto.request.CommentDto;
+import com.accenture.backend.dto.request.InvitationDto;
 import com.accenture.backend.dto.response.*;
 import com.accenture.backend.repository.*;
 import com.accenture.backend.entity.*;
@@ -25,6 +27,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectMemberRepository projectMemberRepo;
     private final ProjectConfigurationRepository configRepo;
     private final UserRepository userRepository;
+    private final ProjectInteractionRepository interactionRepo;
 
     @Value("${app.projects.max-amount}")
     private Integer maxProjectAmountAllowed;
@@ -32,9 +35,6 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public Page<PublicProjectDto> getPublicProjects(Integer page, Integer size, String sortBy, String sortDirection) {
         Long resultsTotal = projectRepo.countAllByConfigIsPublicTrue();
-        // Easier to handle the empty array on the client, than an exception
-        // if (resultsTotal == 0)
-        // return new ArrayList<>();
         Pageable pageable = validatePageableInput(page, size, resultsTotal, sortBy, sortDirection);
         Page<Project> projects = projectRepo.findAllByConfigIsPublicTrue(pageable);
         return projects.map(project -> maperToDto(project));
@@ -45,7 +45,6 @@ public class ProjectServiceImpl implements ProjectService {
         Long userIdPlaceholder = 1L;
         Long resultsTotal = projectMemberRepo.countAllByUserId(userIdPlaceholder);
         Pageable pageable = validatePageableInput(page, size, resultsTotal, sortBy, sortDirection);
-
         /*
          * findProjectsByUserId uses a join with projectMembers via JPQL => above check
          * is acceptable
@@ -113,6 +112,119 @@ public class ProjectServiceImpl implements ProjectService {
         Project existingProject = validateOwnershipAndReturnProject(projectId);
         projectRepo.delete(existingProject);
         return new BasicMessageDto("Project has been succesfully deleted");
+    }
+
+    @Override
+    public BasicMessageDto makeProjectApplication(Long projectId, CommentDto dto) {
+        // User Placeholder
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new EntityNotFoundException("Project", projectId));
+
+        if (projectMemberRepo.existsByUserIdAndProjectId(loggedInUser.getId(), projectId))
+            throw new UserAlreadyMemberException("You are already a member of this project.");
+
+        interactionRepo.save(
+                ProjectInteraction.builder()
+                        .user(loggedInUser)
+                        .project(project)
+                        .type(ProjectInteraction.Type.APPLICATION)
+                        .status(ProjectInteraction.Status.PENDING)
+                        .initComment(dto.getComment()).build());
+
+        return new BasicMessageDto("Project application has been succesfully sent.");
+    }
+
+    @Override
+    @Transactional
+    public BasicMessageDto makeProjectInvitation(Long projectId, InvitationDto dto) {
+        Project existingProject = validateOwnershipAndReturnProject(projectId);
+        if (!(existingProject.getMembers().size() < existingProject.getConfig().getMaxParticipants()))
+            throw new MaxParticipantsReachedException();
+
+        User userToBeInvited = userRepository.findUserByEmail(dto.getEmail())
+                .orElseThrow(() -> new InvalidInputException("No user exists with the email of " + dto.getEmail()));
+
+        if (projectMemberRepo.existsByUserIdAndProjectId(userToBeInvited.getId(), projectId))
+            throw new UserAlreadyMemberException("The user is already a member of this project.");
+
+        interactionRepo.save(
+                ProjectInteraction.builder()
+                        .user(userToBeInvited)
+                        .project(existingProject)
+                        .type(ProjectInteraction.Type.INVITATION)
+                        .status(ProjectInteraction.Status.PENDING)
+                        .initComment(dto.getComment())
+                        .build());
+
+        return new BasicMessageDto("Project invitation has been succesfully sent.");
+    }
+
+    @Override
+    public List<InteractionInvitationDto> getUserInvitations() {
+        // User Placeholder
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        return interactionRepo
+                .findAllByUserIdAndTypeAndStatus(loggedInUser.getId(), ProjectInteraction.Type.INVITATION,
+                        ProjectInteraction.Status.PENDING)
+                .stream()
+                .map((interaction) -> {
+                    Project project = interaction.getProject();
+                    ProjectShortDto projectShortInfo = ProjectShortDto.builder().id(project.getId())
+                            .title(project.getTitle()).build();
+                    return InteractionInvitationDto.builder()
+                            .project(projectShortInfo)
+                            .initAt(interaction.getInitAt())
+                            .comment(interaction.getInitComment()).build();
+                }).toList();
+    }
+
+    @Override
+    public List<ApplicationDto> getProjectApplications(Long projectId) {
+        validateOwnershipAndReturnProject(projectId);
+        return interactionRepo
+                .findAllByProjectIdAndTypeAndStatus(projectId, ProjectInteraction.Type.APPLICATION,
+                        ProjectInteraction.Status.PENDING)
+                .stream()
+                .map((interaction) -> {
+                    User user = interaction.getUser();
+                    UserShortDto userShortInfo = UserShortDto.builder()
+                            .id(user.getId())
+                            .firstName(user.getFirstName())
+                            .lastName(user.getLastName())
+                            .email(user.getEmail()).build();
+                    return ApplicationDto.builder()
+                            .user(userShortInfo)
+                            .initAt(interaction.getInitAt())
+                            .comment(interaction.getInitComment()).build();
+                }).toList();
+    }
+
+    @Override
+    public BasicMessageDto acceptApplication(Long applicationId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'acceptApplication'");
+    }
+
+    @Override
+    public BasicMessageDto declineApplication(Long applicationId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'declineApplication'");
+    }
+
+    @Override
+    public BasicMessageDto acceptInvitation(Long invitationId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'acceptInvitation'");
+    }
+
+    @Override
+    public BasicMessageDto declineInvitation(Long invitationId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'declineInvitation'");
     }
 
     private Project validateOwnershipAndReturnProject(Long projectId) {
