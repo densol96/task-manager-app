@@ -13,7 +13,7 @@ public interface UserMapper {
 
 //    LoginDto toLoginDto(User entity);
 //
-//    //@Mapping(target = "role", expression = "java(com.accenture.backend.model.Role.NOT_CONFIRMED)")
+//    @Mapping(target = "role", expression = "java(com.accenture.backend.model.Role.NOT_CONFIRMED)")
 //    User mainInfoToUser(UserInfoDto userInfoDto);
 
 }
