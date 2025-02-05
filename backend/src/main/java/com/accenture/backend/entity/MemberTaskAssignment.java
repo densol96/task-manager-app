@@ -16,9 +16,9 @@ public class MemberTaskAssignment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // @ManyToOne
-    // @JoinColumn(name = "member_id", nullable = false)
-    // private ProjectMember member;
+    @ManyToOne
+    @JoinColumn(name = "member_id", nullable = false)
+    private ProjectMember member;
 
     @ManyToOne
     @JoinColumn(name = "task_id", nullable = false)

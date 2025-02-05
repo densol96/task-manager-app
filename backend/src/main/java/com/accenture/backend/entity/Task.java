@@ -32,9 +32,9 @@ public class Task {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // @ManyToOne
-    // @JoinColumn(name = "project_id", nullable = false)
-    // private Project project;
+    @ManyToOne
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<MemberTaskAssignment> memberAssignments;
