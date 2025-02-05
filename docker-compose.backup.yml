@@ -1,0 +1,20 @@
+services:
+  mysqldb:
+    image: "mysql:8.0"
+    restart: always
+    ports:
+      - "3307:3306"
+    networks:
+      - springapimysql-net
+    environment:
+      MYSQL_DATABASE: task-manager
+      MYSQL_USER: Admin
+      MYSQL_PASSWORD: strong_password
+      MYSQL_ROOT_PASSWORD: root_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uAdmin", "-pstrong_password"]
+      interval: 10s
+      retries: 10
+
+networks:
+  springapimysql-net:
