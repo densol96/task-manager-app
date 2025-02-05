@@ -1,8 +1,9 @@
-package com.accenture.backend.notifications.controller;
+package com.accenture.backend.controller;
 
+import com.accenture.backend.entity.Notification;
 import com.accenture.backend.entity.User;
-import com.accenture.backend.notifications.entity.Notification;
-import com.accenture.backend.notifications.service.NotificationService;
+import com.accenture.backend.service.notifications.NotificationService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +27,8 @@ public class NotificationController {
     }
 
     @PostMapping
-    public Notification createNotification(@RequestParam User user, @RequestParam String title, @RequestParam String message) {
+    public Notification createNotification(@RequestParam User user, @RequestParam String title,
+            @RequestParam String message) {
         return notificationService.createNotification(user, title, message);
     }
 

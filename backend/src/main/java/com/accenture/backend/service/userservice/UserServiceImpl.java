@@ -16,23 +16,23 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final UserMapper userMapper;
+    // private final UserMapper userMapper;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
 
         log.info("Loading user by email: {}", email);
 
-//        LoginDto loginDto = userRepository.findUserByEmail(email)
-//                .map(userMapper::toLoginDto)
-//                .orElseThrow(() -> {
-//                    log.error("User with email: {} was not found", email);
-//                    return new UsernameNotFoundException("Username not found");
-//                });
+        // LoginDto loginDto = userRepository.findUserByEmail(email)
+        // .map(userMapper::toLoginDto)
+        // .orElseThrow(() -> {
+        // log.error("User with email: {} was not found", email);
+        // return new UsernameNotFoundException("Username not found");
+        // });
 
         log.info("User with email: {} is found", email);
 
-//        return new SecurityUser(loginDto);
+        // return new SecurityUser(loginDto);
 
         return new SecurityUser(new LoginDto());
     }

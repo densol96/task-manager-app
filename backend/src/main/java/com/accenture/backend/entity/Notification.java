@@ -1,6 +1,5 @@
-package com.accenture.backend.notifications.entity;
+package com.accenture.backend.entity;
 
-import com.accenture.backend.entity.User; 
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;

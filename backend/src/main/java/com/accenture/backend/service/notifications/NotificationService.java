@@ -1,8 +1,9 @@
-package com.accenture.backend.notifications.service;
+package com.accenture.backend.service.notifications;
 
+import com.accenture.backend.entity.Notification;
 import com.accenture.backend.entity.User; //
-import com.accenture.backend.notifications.entity.Notification;
-import com.accenture.backend.notifications.repository.NotificationRepository;
+import com.accenture.backend.repository.NotificationRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
