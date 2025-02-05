@@ -1,19 +1,19 @@
 package com.accenture.backend.service.project;
 
 import java.util.*;
+
+import com.accenture.backend.dto.request.AcceptProjectDto;
 import com.accenture.backend.dto.response.*;
 import com.accenture.backend.repository.*;
-import org.springframework.data.domain.*;
-
-import org.springframework.stereotype.Service;
-
-import com.accenture.backend.entity.Project;
-import com.accenture.backend.entity.ProjectMember;
-import com.accenture.backend.exception.custom.EntityNotFoundException;
-import com.accenture.backend.exception.custom.InvalidInputException;
-import com.accenture.backend.exception.custom.PageOutOfRangeException;
-import com.accenture.backend.exception.custom.ServiceUnavailableException;
+import com.accenture.backend.entity.*;
+import com.accenture.backend.exception.custom.*;
 import com.accenture.backend.model.ProjectSortBy;
+
+import jakarta.transaction.Transactional;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.*;
+import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,20 +23,25 @@ public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectRepository projectRepo;
     private final ProjectMemberRepository projectMemberRepo;
+    private final ProjectConfigurationRepository configRepo;
+    private final UserRepository userRepository;
+
+    @Value("${app.projects.max-amount}")
+    private Integer maxProjectAmountAllowed;
 
     @Override
-    public Page<ProjectDto> getPublicProjects(Integer page, Integer size, String sortBy, String sortDirection) {
+    public Page<PublicProjectDto> getPublicProjects(Integer page, Integer size, String sortBy, String sortDirection) {
         Long resultsTotal = projectRepo.countAllByConfigIsPublicTrue();
         // Easier to handle the empty array on the client, than an exception
         // if (resultsTotal == 0)
         // return new ArrayList<>();
         Pageable pageable = validatePageableInput(page, size, resultsTotal, sortBy, sortDirection);
         Page<Project> projects = projectRepo.findAllByConfigIsPublicTrue(pageable);
-        return projects.map(project -> projectMapper(project));
+        return projects.map(project -> maperToDto(project));
     }
 
     @Override
-    public Page<ProjectDto> getUserProjects(Integer page, Integer size, String sortBy, String sortDirection) {
+    public Page<PublicProjectDto> getUserProjects(Integer page, Integer size, String sortBy, String sortDirection) {
         Long userIdPlaceholder = 1L;
         Long resultsTotal = projectMemberRepo.countAllByUserId(userIdPlaceholder);
         Pageable pageable = validatePageableInput(page, size, resultsTotal, sortBy, sortDirection);
@@ -46,11 +51,87 @@ public class ProjectServiceImpl implements ProjectService {
          * is acceptable
          */
         Page<Project> projects = projectRepo.findProjectsByUserId(userIdPlaceholder, pageable);
-        return projects.map(project -> projectMapper(project));
+        return projects.map(project -> maperToDto(project));
     }
 
     @Override
-    public OwnerShortDto getProjectOwner(Long projectId) {
+    @Transactional
+    public BasicNestedResponseDto<ProjectDto> createNewProject(AcceptProjectDto dto) {
+        // USER PLACHOLDER
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+
+        if (projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUser.getId(),
+                ProjectMember.Role.OWNER) >= maxProjectAmountAllowed)
+            throw new MaxProjectOwnerLimitExceededException();
+
+        Project newProject = Project.builder().title(dto.getTitle()).description(dto.getDescription()).build();
+        projectRepo.save(newProject);
+
+        ProjectConfiguration config = ProjectConfiguration.builder().project(newProject).isPublic(dto.getIsPublic())
+                .maxParticipants(dto.getMaxParticipants()).backgroundImage(null).build();
+        configRepo.save(config);
+
+        projectMemberRepo.save(ProjectMember.builder().user(loggedInUser).project(newProject)
+                .projectRole(ProjectMember.Role.OWNER).build());
+
+        PublicProjectDto generalInfo = maperToDto(newProject);
+        ConfigDto configInfo = ConfigDto.builder().id(config.getId()).isPublic(config.getIsPublic())
+                .maxParticipants(config.getMaxParticipants()).build();
+
+        return new BasicNestedResponseDto<ProjectDto>(
+                "New project has been succefully created",
+                ProjectDto.builder().projectInfo(generalInfo).config(configInfo).build());
+    }
+
+    @Override
+    @Transactional
+    public BasicNestedResponseDto<ProjectDto> updateExistingProject(Long projectId, AcceptProjectDto dto) {
+        Project existingProject = validateOwnershipAndReturnProject(projectId);
+
+        existingProject.setTitle(dto.getTitle());
+        existingProject.setDescription(dto.getDescription());
+
+        ProjectConfiguration existingConfig = existingProject.getConfig();
+        existingConfig.setIsPublic(dto.getIsPublic());
+        existingConfig.setMaxParticipants(dto.getMaxParticipants());
+
+        projectRepo.save(existingProject);
+
+        PublicProjectDto generalInfo = maperToDto(existingProject);
+        ConfigDto configInfo = ConfigDto.builder().id(existingConfig.getId()).isPublic(existingConfig.getIsPublic())
+                .maxParticipants(existingConfig.getMaxParticipants()).build();
+
+        return new BasicNestedResponseDto<ProjectDto>(
+                "Existing project has been succefully updated",
+                ProjectDto.builder().projectInfo(generalInfo).config(configInfo).build());
+    }
+
+    @Override
+    @Transactional
+    public BasicMessageDto deleteProject(Long projectId) {
+        Project existingProject = validateOwnershipAndReturnProject(projectId);
+        projectRepo.delete(existingProject);
+        return new BasicMessageDto("Project has been succesfully deleted");
+    }
+
+    private Project validateOwnershipAndReturnProject(Long projectId) {
+        if (projectId < 1)
+            throw new InvalidInputException("project ID", projectId);
+
+        // USER PLACHOLDER
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+
+        ProjectMember currentProjectOwner = getProjectOwner(projectId);
+
+        if (currentProjectOwner.getUser().getId() != loggedInUser.getId())
+            throw new ForbiddenException("You are not the owner of this project and cannot perform this action.");
+
+        return currentProjectOwner.getProject();
+    }
+
+    private ProjectMember getProjectOwner(Long projectId) {
         if (projectId <= 0)
             throw new InvalidInputException("project ID", projectId);
 
@@ -58,7 +139,7 @@ public class ProjectServiceImpl implements ProjectService {
             throw new EntityNotFoundException("Project", projectId);
 
         List<ProjectMember> owners = projectMemberRepo.findByProjectIdAndProjectRole(projectId,
-                ProjectMember.ProjectRole.OWNER);
+                ProjectMember.Role.OWNER);
         /*
          * In the current implementation the is only 1 owner, but in case it will be
          * change to multi-ownership later, it makes sense to perform an additional
@@ -77,7 +158,7 @@ public class ProjectServiceImpl implements ProjectService {
             System.out.println("Multiple owners found for project " + projectId);
         }
 
-        return OwnerShortDto.fromEntity(owners.get(0));
+        return owners.get(0);
     }
 
     private Pageable validatePageableInput(Integer page, Integer size, Long resultsTotal, String sortBy,
@@ -103,12 +184,12 @@ public class ProjectServiceImpl implements ProjectService {
         return page == null ? PageRequest.of(0, Integer.MAX_VALUE, sort) : PageRequest.of(page - 1, size, sort);
     }
 
-    private ProjectDto projectMapper(Project project) {
-        return new ProjectDto(
-                project.getId(),
-                project.getTitle(),
-                project.getDescription(),
-                project.getCreatedAt(),
-                getProjectOwner(project.getId()));
+    private PublicProjectDto maperToDto(Project project) {
+        return PublicProjectDto.builder()
+                .id(project.getId())
+                .title(project.getTitle())
+                .description(project.getDescription())
+                .createdAt(project.getCreatedAt())
+                .owner(OwnerShortDto.fromEntity(getProjectOwner(project.getId()))).build();
     }
 }

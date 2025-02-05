@@ -27,7 +27,7 @@ public class ProjectMember {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProjectRole projectRole;
+    private Role projectRole;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinDate;
@@ -41,15 +41,15 @@ public class ProjectMember {
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MemberTaskAssignment> taskAssignments = new ArrayList<>();
 
-    public static enum ProjectRole {
+    public static enum Role {
         OWNER, MANAGER, USER
     }
 
     @Builder
-    public ProjectMember(User user, Project project, ProjectRole projectRole, LocalDateTime joinDate) {
+    public ProjectMember(User user, Project project, Role projectRole, LocalDateTime joinDate) {
         this.user = user;
         this.project = project;
-        this.projectRole = (projectRole != null) ? projectRole : ProjectRole.USER;
+        this.projectRole = (projectRole != null) ? projectRole : Role.USER;
         this.joinDate = joinDate;
     }
 

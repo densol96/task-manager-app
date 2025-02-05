@@ -6,7 +6,7 @@ import lombok.*;
 @Setter
 @AllArgsConstructor
 @Builder
-public class ProjectDto {
-    private PublicProjectDto projectInfo;
-    private ConfigDto config;
+public class BasicNestedResponseDto<T> {
+    private String message;
+    private T data;
 }
