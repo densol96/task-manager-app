@@ -34,7 +34,6 @@ public class MessagingService {
             }
         }
 
-
         Message newMessage = new Message();
         newMessage.setSender(sender);
         newMessage.setReceiver(receiver);
