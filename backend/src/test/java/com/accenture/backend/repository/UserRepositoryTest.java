@@ -66,7 +66,6 @@ class UserRepositoryTest {
                 .role(Role.USER)
                 .build();
 
-
         userRepository.save(user3);
     }
 
