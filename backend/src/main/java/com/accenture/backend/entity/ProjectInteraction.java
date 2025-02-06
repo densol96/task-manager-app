@@ -40,8 +40,6 @@ public class ProjectInteraction {
 
     private String initComment;
 
-    private String responseComment;
-
     public static enum Type {
         INVITATION, APPLICATION
     }

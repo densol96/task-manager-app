@@ -1,5 +1,6 @@
 package com.accenture.backend.service.project;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 import com.accenture.backend.dto.request.AcceptProjectDto;
@@ -123,6 +124,9 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new EntityNotFoundException("Project", projectId));
 
+        if (!project.getConfig().getIsPublic())
+            throw new ForbiddenException("Users are not allowed to send applications to private projects.");
+
         if (projectMemberRepo.existsByUserIdAndProjectId(loggedInUser.getId(), projectId))
             throw new UserAlreadyMemberException("You are already a member of this project.");
 
@@ -204,30 +208,88 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @Transactional
     public BasicMessageDto acceptApplication(Long applicationId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'acceptApplication'");
+        ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
+
+        if (application.getType() != ProjectInteraction.Type.APPLICATION)
+            throw new InvalidInteractionTypeException("This interaction is not an application.");
+
+        Project project = validateOwnershipAndReturnProject(application.getProject().getId());
+
+        application.setResponseDate(LocalDateTime.now());
+        application.setStatus(ProjectInteraction.Status.ACCEPTED);
+
+        interactionRepo.save(application);
+
+        // USER PLACHOLDER
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+
+        projectMemberRepo
+                .save(ProjectMember.builder().user(userRepository.findById(loggedInUser.getId()).get()).project(project)
+                        .projectRole(ProjectMember.Role.USER).build());
+
+        return new BasicMessageDto("User application to join the project has been accepted");
     }
 
     @Override
     public BasicMessageDto declineApplication(Long applicationId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'declineApplication'");
+        ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
+
+        if (application.getType() != ProjectInteraction.Type.APPLICATION)
+            throw new InvalidInteractionTypeException("This interaction is not an application.");
+
+        validateOwnership(application.getProject().getId());
+
+        application.setResponseDate(LocalDateTime.now());
+        application.setStatus(ProjectInteraction.Status.DECLINED);
+
+        interactionRepo.save(application);
+
+        return new BasicMessageDto("User application to join the project has been declined");
     }
 
     @Override
     public BasicMessageDto acceptInvitation(Long invitationId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'acceptInvitation'");
+        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
+
+        if (invitation.getType() != ProjectInteraction.Type.INVITATION)
+            throw new InvalidInteractionTypeException("This interaction is not an application.");
+
+         // USER PLACHOLDER
+         User loggedInUser = userRepository.findById(1L).orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+
+        if()
     }
 
     @Override
     public BasicMessageDto declineInvitation(Long invitationId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'declineInvitation'");
+        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
+
+        if (invitation.getType() != ProjectInteraction.Type.INVITATION)
+            throw new InvalidInteractionTypeException("This interaction is not an application.");
+
+        // USER PLACHOLDER
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+
+    }
+
+    private ProjectInteraction validateAndReturnProjectInteraction(Long interactionId) {
+        if (interactionId < 1)
+            throw new InvalidInputException("project application ID", interactionId);
+
+        return interactionRepo.findById(interactionId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "No project interaction found with the id of " + interactionId));
     }
 
     private Project validateOwnershipAndReturnProject(Long projectId) {
+        return validateOwnership(projectId).getProject();
+    }
+
+    private ProjectMember validateOwnership(Long projectId) {
         if (projectId < 1)
             throw new InvalidInputException("project ID", projectId);
 
@@ -240,7 +302,7 @@ public class ProjectServiceImpl implements ProjectService {
         if (currentProjectOwner.getUser().getId() != loggedInUser.getId())
             throw new ForbiddenException("You are not the owner of this project and cannot perform this action.");
 
-        return currentProjectOwner.getProject();
+        return currentProjectOwner;
     }
 
     private ProjectMember getProjectOwner(Long projectId) {
