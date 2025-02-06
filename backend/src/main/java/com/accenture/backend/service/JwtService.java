@@ -1,4 +1,4 @@
-package com.accenture.backend.service.jwtservise;
+package com.accenture.backend.service;
 
 import io.jsonwebtoken.Claims;
 import org.springframework.security.core.userdetails.UserDetails;

@@ -1,4 +1,4 @@
-package com.accenture.backend.service.project;
+package com.accenture.backend.service;
 
 import java.util.List;
 

@@ -2,7 +2,8 @@ package com.accenture.backend.controller.advice;
 
 import com.accenture.backend.dto.response.BasicErrorDto;
 import com.accenture.backend.dto.response.ValidationErrorResponseDto;
-import com.accenture.backend.model.ErrorMessage;
+import com.accenture.backend.exception.custom.EmailAlreadyInUseException;
+import com.accenture.backend.util.ErrorMessage;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -22,7 +23,7 @@ public class ControllerExceptionAdvice {
 
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<ErrorMessage> usernameNotFoundHandler() {
-        ErrorMessage errorDetails = new ErrorMessage("Username or email already in use");
+        ErrorMessage errorDetails = new ErrorMessage("There is no user with such email");
         return ResponseEntity.badRequest().body(errorDetails);
     }
 
@@ -41,6 +42,12 @@ public class ControllerExceptionAdvice {
         String message = e.getMessage().contains("request body is missing") ? "Required request body is missing."
                 : "Invalid input format.";
         return new ResponseEntity<>(new BasicErrorDto(message), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(EmailAlreadyInUseException.class)
+    public ResponseEntity<ErrorMessage> EmailAlreadyInUseHandler() {
+        ErrorMessage errorDetails = new ErrorMessage("Email already in use");
+        return ResponseEntity.badRequest().body(errorDetails);
     }
 
     @ExceptionHandler(Exception.class)

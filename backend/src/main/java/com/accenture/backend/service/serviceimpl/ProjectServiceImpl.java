@@ -1,4 +1,4 @@
-package com.accenture.backend.service.project;
+package com.accenture.backend.service.serviceimpl;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -8,9 +8,27 @@ import com.accenture.backend.dto.request.CommentDto;
 import com.accenture.backend.dto.request.InvitationDto;
 import com.accenture.backend.dto.response.*;
 import com.accenture.backend.repository.*;
-import com.accenture.backend.entity.*;
-import com.accenture.backend.exception.custom.*;
-import com.accenture.backend.model.ProjectSortBy;
+import com.accenture.backend.service.ProjectService;
+import org.springframework.data.domain.*;
+
+import org.springframework.stereotype.Service;
+
+import com.accenture.backend.entity.Project;
+import com.accenture.backend.entity.ProjectConfiguration;
+import com.accenture.backend.entity.ProjectInteraction;
+import com.accenture.backend.entity.ProjectMember;
+import com.accenture.backend.entity.User;
+import com.accenture.backend.exception.custom.AlreadyExistsException;
+import com.accenture.backend.exception.custom.EntityNotFoundException;
+import com.accenture.backend.exception.custom.ForbiddenException;
+import com.accenture.backend.exception.custom.InvalidInputException;
+import com.accenture.backend.exception.custom.InvalidInteractionException;
+import com.accenture.backend.exception.custom.MaxParticipantsReachedException;
+import com.accenture.backend.exception.custom.MaxProjectOwnerLimitExceededException;
+import com.accenture.backend.exception.custom.PageOutOfRangeException;
+import com.accenture.backend.exception.custom.ServiceUnavailableException;
+import com.accenture.backend.exception.custom.UserAlreadyMemberException;
+import com.accenture.backend.enums.ProjectSortBy;
 
 import jakarta.transaction.Transactional;
 

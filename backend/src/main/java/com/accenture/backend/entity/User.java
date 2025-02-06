@@ -3,12 +3,11 @@ package com.accenture.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import com.accenture.backend.model.Role;
+import com.accenture.backend.enums.Role;
 
 import java.sql.Timestamp;
 
-@Getter
-@Setter
+@Data
 @Entity
 @Builder
 @NoArgsConstructor

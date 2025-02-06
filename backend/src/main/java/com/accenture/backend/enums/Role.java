@@ -1,4 +1,4 @@
-package com.accenture.backend.model;
+package com.accenture.backend.enums;
 
 import org.springframework.security.core.GrantedAuthority;
 

@@ -1,6 +1,6 @@
-package com.accenture.backend.dto;
+package com.accenture.backend.dto.user;
 
-import com.accenture.backend.model.Role;
+import com.accenture.backend.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginDto {
+public class UserRoleDto {
     private String email;
     private String password;
     private Role role;

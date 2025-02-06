@@ -20,9 +20,9 @@ import com.accenture.backend.dto.response.UserInteractionDto;
 import com.accenture.backend.dto.response.BasicMessageDto;
 import com.accenture.backend.dto.response.BasicNestedResponseDto;
 import com.accenture.backend.dto.response.ProjectInteractionDto;
-import com.accenture.backend.dto.response.ProjectDto;
 import com.accenture.backend.dto.response.PublicProjectDto;
-import com.accenture.backend.service.project.ProjectService;
+import com.accenture.backend.dto.response.ProjectDto;
+import com.accenture.backend.service.ProjectService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor
 public class ProjectController {
+
     private final ProjectService projectService;
 
     @GetMapping("/public")

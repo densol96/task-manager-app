@@ -1,6 +1,6 @@
-package com.accenture.backend.config.security.util;
+package com.accenture.backend.util;
 
-import com.accenture.backend.service.jwtservise.JwtService;
+import com.accenture.backend.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

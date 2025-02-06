@@ -1,6 +1,6 @@
-package com.accenture.backend.model;
+package com.accenture.backend.util;
 
-import com.accenture.backend.dto.LoginDto;
+import com.accenture.backend.dto.user.UserRoleDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
@@ -13,20 +13,20 @@ import java.util.List;
 @AllArgsConstructor
 public class SecurityUser implements UserDetails {
 
-    private LoginDto loginDto;
+    private UserRoleDto userRoleDto;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(loginDto.getRole());
+        return List.of(userRoleDto.getRole());
     }
 
     @Override
     public String getPassword() {
-        return loginDto.getPassword();
+        return userRoleDto.getPassword();
     }
 
     @Override
     public String getUsername() {
-        return loginDto.getEmail();
+        return userRoleDto.getEmail();
     }
 }
