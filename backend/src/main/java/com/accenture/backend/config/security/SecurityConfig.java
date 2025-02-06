@@ -23,10 +23,11 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/login/**", "/sign-up/**").permitAll()
-                        .requestMatchers("/api/v1/user/email").hasRole("NOT_CONFIRMED")
-                        .requestMatchers("/api/v1/user/**").hasRole("NOT_CONFIRMED")
-                        .requestMatchers("/api/v1/tasks/**").hasRole("NOT_CONFIRMED")
-                        .requestMatchers("/api/v1/notifications/**").hasRole("NOT_CONFIRMED")
+                        .requestMatchers("/api/v1/user/email-request").hasRole("NOT_CONFIRMED")
+                        .requestMatchers("/api/v1/user/email-code/**").hasRole("NOT_CONFIRMED")
+                        .requestMatchers("/api/v1/user/**").hasRole("USER")
+                        .requestMatchers("/api/v1/tasks/**").hasRole("USER")
+                        .requestMatchers("/api/v1/notifications/**").hasRole("USER")
                         .anyRequest().denyAll()
                 ).sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

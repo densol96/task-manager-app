@@ -10,10 +10,10 @@ import org.springframework.stereotype.Service;
 
 import com.accenture.backend.entity.Project;
 import com.accenture.backend.entity.ProjectMember;
-import com.accenture.backend.exception.custom.EntityNotFoundException;
-import com.accenture.backend.exception.custom.InvalidInputException;
-import com.accenture.backend.exception.custom.PageOutOfRangeException;
-import com.accenture.backend.exception.custom.ServiceUnavailableException;
+import com.accenture.backend.exception.EntityNotFoundException;
+import com.accenture.backend.exception.InvalidInputException;
+import com.accenture.backend.exception.PageOutOfRangeException;
+import com.accenture.backend.exception.ServiceUnavailableException;
 import com.accenture.backend.enums.ProjectSortBy;
 
 import lombok.RequiredArgsConstructor;

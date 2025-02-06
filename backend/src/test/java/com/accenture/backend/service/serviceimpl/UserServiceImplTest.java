@@ -8,7 +8,7 @@ import com.accenture.backend.dto.user.UserInfoDto;
 import com.accenture.backend.dto.user.UserRoleDto;
 import com.accenture.backend.entity.User;
 import com.accenture.backend.enums.Role;
-import com.accenture.backend.exception.custom.EmailAlreadyInUseException;
+import com.accenture.backend.exception.EmailAlreadyInUseException;
 import com.accenture.backend.mappper.UserMapper;
 import com.accenture.backend.repository.UserRepository;
 import com.accenture.backend.util.SecurityUser;
