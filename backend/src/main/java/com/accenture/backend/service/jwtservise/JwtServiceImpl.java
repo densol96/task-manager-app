@@ -1,6 +1,5 @@
-package com.accenture.backend.service.serviceimpl;
+package com.accenture.backend.service.jwtservise;
 
-import com.accenture.backend.service.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -17,7 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 @Service
-public class JwtServiceImpl implements JwtService {
+public class JwtServiceImpl implements JwtService{
     @Value("${security.jwt.secret-key}")
     private String secretKey;
 

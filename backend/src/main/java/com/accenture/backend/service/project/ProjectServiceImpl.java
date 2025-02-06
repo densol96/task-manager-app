@@ -1,9 +1,8 @@
-package com.accenture.backend.service.serviceimpl;
+package com.accenture.backend.service.project;
 
 import java.util.*;
 import com.accenture.backend.dto.response.*;
 import com.accenture.backend.repository.*;
-import com.accenture.backend.service.ProjectService;
 import org.springframework.data.domain.*;
 
 import org.springframework.stereotype.Service;
@@ -14,7 +13,7 @@ import com.accenture.backend.exception.custom.EntityNotFoundException;
 import com.accenture.backend.exception.custom.InvalidInputException;
 import com.accenture.backend.exception.custom.PageOutOfRangeException;
 import com.accenture.backend.exception.custom.ServiceUnavailableException;
-import com.accenture.backend.enums.ProjectSortBy;
+import com.accenture.backend.model.ProjectSortBy;
 
 import lombok.RequiredArgsConstructor;
 

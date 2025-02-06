@@ -1,4 +1,4 @@
-package com.accenture.backend.util;
+package com.accenture.backend.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

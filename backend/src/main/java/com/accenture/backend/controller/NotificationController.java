@@ -2,7 +2,7 @@ package com.accenture.backend.controller;
 
 import com.accenture.backend.entity.Notification;
 import com.accenture.backend.entity.User;
-import com.accenture.backend.service.serviceimpl.NotificationService;
+import com.accenture.backend.service.notifications.NotificationService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

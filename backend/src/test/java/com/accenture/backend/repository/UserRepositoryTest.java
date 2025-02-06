@@ -1,7 +1,7 @@
 package com.accenture.backend.repository;
 
 import com.accenture.backend.entity.User;
-import com.accenture.backend.enums.Role;
+import com.accenture.backend.model.Role;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,5 +88,4 @@ class UserRepositoryTest {
 
         assertFalse(userOptional.isPresent(), "User should not be found");
     }
-
 }

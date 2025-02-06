@@ -1,5 +1,8 @@
 package com.accenture.backend.controller;
 
+import java.util.List;
+
+import org.hibernate.query.SortDirection;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.accenture.backend.dto.response.ProjectDto;
-import com.accenture.backend.service.ProjectService;
+import com.accenture.backend.service.project.ProjectService;
 
 import lombok.RequiredArgsConstructor;
 

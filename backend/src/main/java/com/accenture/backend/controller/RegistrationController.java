@@ -1,27 +1,35 @@
 package com.accenture.backend.controller;
 
-import com.accenture.backend.dto.user.UserInfoDto;
-import com.accenture.backend.service.UserService;
+import com.accenture.backend.dto.UserInfoDto;
+import com.accenture.backend.entity.User;
+import com.accenture.backend.service.userservice.UserService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import lombok.Value;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/sign-up")
+@RequestMapping("/sing-up")
 @RequiredArgsConstructor
 public class RegistrationController {
 
     private final UserService userService;
 
-    @PostMapping
-    public ResponseEntity<?> createUser(@RequestBody @Valid UserInfoDto userInfo){
-        userService.createUser(userInfo);
+//    @PostMapping("/email")
+//    public void verifyEmail(){
+//
+//        userService
+//    }
 
-        return ResponseEntity.ok("User created");
+    @PostMapping("/user-info")
+    public void createUser(@Valid UserInfoDto userInfo){
+
     }
+
 
 }

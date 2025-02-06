@@ -1,4 +1,4 @@
-package com.accenture.backend.enums;
+package com.accenture.backend.model;
 
 public enum SortDirectionEnum {
     ASC, DESC
