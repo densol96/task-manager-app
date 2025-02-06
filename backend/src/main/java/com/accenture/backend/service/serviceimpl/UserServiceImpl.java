@@ -3,6 +3,7 @@ package com.accenture.backend.service.serviceimpl;
 import com.accenture.backend.dto.user.UserRoleDto;
 import com.accenture.backend.dto.user.UserInfoDto;
 import com.accenture.backend.entity.User;
+import com.accenture.backend.exception.custom.AuthenticationRuntimeException;
 import com.accenture.backend.exception.custom.EmailAlreadyInUseException;
 import com.accenture.backend.mappper.UserMapper;
 import com.accenture.backend.util.SecurityUser;
@@ -10,6 +11,11 @@ import com.accenture.backend.repository.UserRepository;
 import com.accenture.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import javax.security.sasl.AuthenticationException;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,7 +48,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void createUser(UserInfoDto userInfoDto){
+    public void createUser(UserInfoDto userInfoDto) {
         if (userExists(userInfoDto.getEmail())) {
             log.error("Email {} is already taken", userInfoDto.getEmail());
             throw new EmailAlreadyInUseException("This email already taken");
@@ -61,8 +67,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean userExists(String email){
+    public boolean userExists(String email) {
         log.info("checking existence of the user with email: {}", email);
         return userRepository.countUserByEmail(email);
+    }
+
+    @Override
+    public Long getLoggedInUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || !(authentication.getPrincipal() instanceof SecurityUser)) {
+            throw new AuthenticationRuntimeException();
+        }
+        return ((SecurityUser) authentication.getPrincipal()).getId();
     }
 }

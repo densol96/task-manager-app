@@ -29,4 +29,8 @@ public class SecurityUser implements UserDetails {
     public String getUsername() {
         return userRoleDto.getEmail();
     }
+
+    public Long getId() {
+        return userRoleDto.getId();
+    }
 }

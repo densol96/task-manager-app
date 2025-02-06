@@ -16,23 +16,22 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @AllArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/login/**", "/sign-up/**").permitAll()
-                        .requestMatchers("/api/v1/user/email").hasRole("NOT_CONFIRMED")
-                        .requestMatchers("/api/v1/user/**").hasRole("NOT_CONFIRMED")
-                        .requestMatchers("/api/v1/tasks/**").hasRole("NOT_CONFIRMED")
-                        .requestMatchers("/api/v1/notifications/**").hasRole("NOT_CONFIRMED")
-                        .anyRequest().denyAll()
-                ).sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http.csrf(AbstractHttpConfigurer::disable)
+                                .authorizeHttpRequests(authorize -> authorize
+                                                .requestMatchers("/login/**", "/sign-up/**").permitAll()
+                                                .requestMatchers("/api/v1/user/email").hasRole("NOT_CONFIRMED")
+                                                .requestMatchers("/api/v1/user/**").hasRole("NOT_CONFIRMED")
+                                                .requestMatchers("/api/v1/tasks/**").hasRole("NOT_CONFIRMED")
+                                                .requestMatchers("/api/v1/notifications/**").hasRole("NOT_CONFIRMED")
+                                                .anyRequest().denyAll())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+                return http.build();
+        }
 }

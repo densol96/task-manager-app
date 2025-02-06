@@ -1,15 +1,23 @@
 package com.accenture.backend.service.serviceimpl;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
 
 import com.accenture.backend.dto.request.AcceptProjectDto;
 import com.accenture.backend.dto.request.CommentDto;
 import com.accenture.backend.dto.request.InvitationDto;
-import com.accenture.backend.dto.response.*;
-import com.accenture.backend.repository.*;
+import com.accenture.backend.dto.response.BasicMessageDto;
+import com.accenture.backend.dto.response.BasicNestedResponseDto;
+import com.accenture.backend.dto.response.ConfigDto;
+import com.accenture.backend.dto.response.OwnerShortDto;
+import com.accenture.backend.dto.response.ProjectDto;
+import com.accenture.backend.dto.response.ProjectInteractionDto;
+import com.accenture.backend.dto.response.ProjectShortDto;
+import com.accenture.backend.dto.response.PublicProjectDto;
+import com.accenture.backend.dto.response.UserInteractionDto;
+import com.accenture.backend.dto.response.UserShortDto;
 import com.accenture.backend.service.ProjectService;
-import org.springframework.data.domain.*;
+import com.accenture.backend.service.UserService;
 
 import org.springframework.stereotype.Service;
 
@@ -19,6 +27,7 @@ import com.accenture.backend.entity.ProjectInteraction;
 import com.accenture.backend.entity.ProjectMember;
 import com.accenture.backend.entity.User;
 import com.accenture.backend.exception.custom.AlreadyExistsException;
+import com.accenture.backend.exception.custom.AuthenticationRuntimeException;
 import com.accenture.backend.exception.custom.EntityNotFoundException;
 import com.accenture.backend.exception.custom.ForbiddenException;
 import com.accenture.backend.exception.custom.InvalidInputException;
@@ -28,12 +37,20 @@ import com.accenture.backend.exception.custom.MaxProjectOwnerLimitExceededExcept
 import com.accenture.backend.exception.custom.PageOutOfRangeException;
 import com.accenture.backend.exception.custom.ServiceUnavailableException;
 import com.accenture.backend.exception.custom.UserAlreadyMemberException;
+import com.accenture.backend.repository.ProjectConfigurationRepository;
+import com.accenture.backend.repository.ProjectInteractionRepository;
+import com.accenture.backend.repository.ProjectMemberRepository;
+import com.accenture.backend.repository.ProjectRepository;
+import com.accenture.backend.repository.UserRepository;
 import com.accenture.backend.enums.ProjectSortBy;
 
 import jakarta.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -47,6 +64,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectConfigurationRepository configRepo;
     private final UserRepository userRepository;
     private final ProjectInteractionRepository interactionRepo;
+    private final UserService userService;
 
     @Value("${app.projects.max-amount}")
     private Integer maxProjectAmountAllowed;
@@ -61,37 +79,42 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public Page<PublicProjectDto> getUserProjects(Integer page, Integer size, String sortBy, String sortDirection) {
-        Long userIdPlaceholder = 1L;
-        Long resultsTotal = projectMemberRepo.countAllByUserId(userIdPlaceholder);
+        Long loggedInUserId = userService.getLoggedInUserId();
+        Long resultsTotal = projectMemberRepo.countAllByUserId(loggedInUserId);
         Pageable pageable = validatePageableInput(page, size, resultsTotal, sortBy, sortDirection);
         /*
          * findProjectsByUserId uses a join with projectMembers via JPQL => above check
          * is acceptable
          */
-        Page<Project> projects = projectRepo.findProjectsByUserId(userIdPlaceholder, pageable);
+        Page<Project> projects = projectRepo.findProjectsByUserId(loggedInUserId, pageable);
         return projects.map(project -> maperToDto(project));
     }
 
     @Override
     @Transactional
     public BasicNestedResponseDto<ProjectDto> createNewProject(AcceptProjectDto dto) {
-        // USER PLACHOLDER
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        Long loggedInUserId = userService.getLoggedInUserId();
 
-        if (projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUser.getId(),
+        if (projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId,
                 ProjectMember.Role.OWNER) >= maxProjectAmountAllowed)
             throw new MaxProjectOwnerLimitExceededException();
 
         Project newProject = Project.builder().title(dto.getTitle()).description(dto.getDescription()).build();
         projectRepo.save(newProject);
 
-        ProjectConfiguration config = ProjectConfiguration.builder().project(newProject).isPublic(dto.getIsPublic())
-                .maxParticipants(dto.getMaxParticipants()).backgroundImage(null).build();
+        ProjectConfiguration config = ProjectConfiguration.builder()
+                .project(newProject)
+                .isPublic(dto.getIsPublic())
+                .maxParticipants(dto.getMaxParticipants())
+                .build();
         configRepo.save(config);
 
-        projectMemberRepo.save(ProjectMember.builder().user(loggedInUser).project(newProject)
-                .projectRole(ProjectMember.Role.OWNER).build());
+        projectMemberRepo
+                .save(ProjectMember.builder()
+                        .user(userRepository.findById(loggedInUserId)
+                                .orElseThrow(() -> new AuthenticationRuntimeException()))
+                        .project(newProject)
+                        .projectRole(ProjectMember.Role.OWNER).build());
 
         PublicProjectDto generalInfo = maperToDto(newProject);
         ConfigDto configInfo = ConfigDto.builder().id(config.getId()).isPublic(config.getIsPublic())
@@ -117,7 +140,9 @@ public class ProjectServiceImpl implements ProjectService {
         projectRepo.save(existingProject); // cascade active
 
         PublicProjectDto generalInfo = maperToDto(existingProject);
-        ConfigDto configInfo = ConfigDto.builder().id(existingConfig.getId()).isPublic(existingConfig.getIsPublic())
+        ConfigDto configInfo = ConfigDto.builder()
+                .id(existingConfig.getId())
+                .isPublic(existingConfig.getIsPublic())
                 .maxParticipants(existingConfig.getMaxParticipants()).build();
 
         return new BasicNestedResponseDto<ProjectDto>(
@@ -136,8 +161,7 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public BasicMessageDto makeProjectApplication(Long projectId, CommentDto dto) {
         // User Placeholder
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        Long loggedInUserId = userService.getLoggedInUserId();
 
         Project project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new EntityNotFoundException("Project", projectId));
@@ -145,16 +169,17 @@ public class ProjectServiceImpl implements ProjectService {
         if (!project.getConfig().getIsPublic())
             throw new ForbiddenException("Users are not allowed to send applications to private projects.");
 
-        if (projectMemberRepo.existsByUserIdAndProjectId(loggedInUser.getId(), projectId))
+        if (projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
             throw new UserAlreadyMemberException("You are already a member of this project.");
 
-        if (interactionRepo.existsByUserIdAndProjectIdAndStatus(loggedInUser.getId(), project.getId(),
+        if (interactionRepo.existsByUserIdAndProjectIdAndStatus(loggedInUserId, project.getId(),
                 ProjectInteraction.Status.PENDING))
             throw new AlreadyExistsException("You already have a pending invitiation / application.");
 
         interactionRepo.save(
                 ProjectInteraction.builder()
-                        .user(loggedInUser)
+                        .user(userRepository.findById(loggedInUserId)
+                                .orElseThrow(() -> new AuthenticationRuntimeException()))
                         .project(project)
                         .type(ProjectInteraction.Type.APPLICATION)
                         .status(ProjectInteraction.Status.PENDING)
@@ -194,11 +219,9 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public List<ProjectInteractionDto> getUserInvitations() {
-        // User Placeholder
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        Long loggedInUserId = userService.getLoggedInUserId();
         return interactionRepo
-                .findAllByUserIdAndTypeAndStatus(loggedInUser.getId(), ProjectInteraction.Type.INVITATION,
+                .findAllByUserIdAndTypeAndStatus(loggedInUserId, ProjectInteraction.Type.INVITATION,
                         ProjectInteraction.Status.PENDING)
                 .stream()
                 .map((interaction) -> {
@@ -214,11 +237,10 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public List<ProjectInteractionDto> getUserApplications() {
-        // User Placeholder
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        Long loggedInUserId = userService.getLoggedInUserId();
+
         return interactionRepo
-                .findAllByUserIdAndTypeAndStatus(loggedInUser.getId(), ProjectInteraction.Type.APPLICATION,
+                .findAllByUserIdAndTypeAndStatus(loggedInUserId, ProjectInteraction.Type.APPLICATION,
                         ProjectInteraction.Status.PENDING)
                 .stream()
                 .map((interaction) -> {
@@ -276,10 +298,6 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public BasicMessageDto acceptApplication(Long applicationId) {
-        // USER PLACHOLDER
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
-
         ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
 
         validateActiveApplication(application);
@@ -326,26 +344,24 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public BasicMessageDto acceptInvitation(Long invitationId) {
-        // USER PLACHOLDER
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        Long loggedInUserId = userService.getLoggedInUserId();
 
         ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
 
-        validateActiveInvitationForUser(invitation, loggedInUser.getId());
+        validateActiveInvitationForUser(invitation, loggedInUserId);
 
         invitation.setResponseDate(LocalDateTime.now());
         invitation.setStatus(ProjectInteraction.Status.ACCEPTED);
 
         interactionRepo.save(invitation);
 
-        Long userId = loggedInUser.getId();
         Project project = invitation.getProject();
 
-        if (projectMemberRepo.existsByUserIdAndProjectId(userId, project.getId()))
+        if (projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, project.getId()))
             throw new UserAlreadyMemberException();
 
-        projectMemberRepo.save(ProjectMember.builder().user(loggedInUser)
+        projectMemberRepo.save(ProjectMember.builder()
+                .user(userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException()))
                 .project(project)
                 .projectRole(ProjectMember.Role.USER)
                 .build());
@@ -355,13 +371,10 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public BasicMessageDto declineInvitation(Long invitationId) {
-        // USER PLACHOLDER
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        Long loggedInUserId = userService.getLoggedInUserId();
 
         ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
-
-        validateActiveInvitationForUser(invitation, loggedInUser.getId());
+        validateActiveInvitationForUser(invitation, loggedInUserId);
 
         invitation.setResponseDate(LocalDateTime.now());
         invitation.setStatus(ProjectInteraction.Status.DECLINED);
@@ -372,18 +385,16 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public BasicMessageDto cancelApplication(Long applicationId) {
-        // USER PLACHOLDER
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        Long loggedInUserId = userService.getLoggedInUserId();
+
         ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
 
         validateActiveApplication(application);
 
-        if (application.getUser().getId() != loggedInUser.getId())
+        if (application.getUser().getId() != loggedInUserId)
             throw new ForbiddenException("Users are not allowed to manage other user's applications / invitations");
 
         interactionRepo.delete(application);
-
         return new BasicMessageDto("Project application has succefully been calceled.");
 
     }
