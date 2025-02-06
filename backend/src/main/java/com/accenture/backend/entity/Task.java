@@ -1,5 +1,7 @@
 package com.accenture.backend.entity;
 
+import com.accenture.backend.enums.TaskPriority;
+import com.accenture.backend.enums.TaskStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

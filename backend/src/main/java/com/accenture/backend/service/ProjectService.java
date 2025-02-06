@@ -1,4 +1,4 @@
-package com.accenture.backend.service.project;
+package com.accenture.backend.service;
 
 import org.springframework.data.domain.Page;
 
