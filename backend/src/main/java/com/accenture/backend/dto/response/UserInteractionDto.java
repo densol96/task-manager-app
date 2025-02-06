@@ -10,7 +10,7 @@ import lombok.*;
 @Setter
 @AllArgsConstructor
 @Builder
-public class ApplicationDto {
+public class UserInteractionDto {
     private UserShortDto user;
     private LocalDateTime initAt;
     private String comment;

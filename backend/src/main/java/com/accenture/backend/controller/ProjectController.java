@@ -16,10 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.accenture.backend.dto.request.AcceptProjectDto;
 import com.accenture.backend.dto.request.CommentDto;
 import com.accenture.backend.dto.request.InvitationDto;
-import com.accenture.backend.dto.response.ApplicationDto;
+import com.accenture.backend.dto.response.UserInteractionDto;
 import com.accenture.backend.dto.response.BasicMessageDto;
 import com.accenture.backend.dto.response.BasicNestedResponseDto;
-import com.accenture.backend.dto.response.InteractionInvitationDto;
+import com.accenture.backend.dto.response.ProjectInteractionDto;
 import com.accenture.backend.dto.response.ProjectDto;
 import com.accenture.backend.dto.response.PublicProjectDto;
 import com.accenture.backend.service.project.ProjectService;
@@ -108,12 +108,12 @@ public class ProjectController {
     }
 
     @GetMapping("/invitations")
-    public ResponseEntity<List<InteractionInvitationDto>> getUserInvitations() {
+    public ResponseEntity<List<ProjectInteractionDto>> getUserInvitations() {
         return new ResponseEntity<>(projectService.getUserInvitations(), HttpStatus.OK);
     }
 
     @GetMapping("/{projectId}/applications")
-    public ResponseEntity<List<ApplicationDto>> getProjectApplications(@PathVariable Long projectId) {
+    public ResponseEntity<List<UserInteractionDto>> getProjectApplications(@PathVariable Long projectId) {
         return new ResponseEntity<>(projectService.getProjectApplications(projectId), HttpStatus.OK);
     }
 

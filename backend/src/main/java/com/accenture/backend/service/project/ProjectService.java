@@ -3,7 +3,6 @@ package com.accenture.backend.service.project;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import com.accenture.backend.dto.request.*;
 import com.accenture.backend.dto.response.*;
@@ -31,7 +30,15 @@ public interface ProjectService {
 
     BasicMessageDto declineInvitation(Long invitationId);
 
-    List<InteractionInvitationDto> getUserInvitations();
+    BasicMessageDto cancelApplication(Long applicationId);
 
-    List<ApplicationDto> getProjectApplications(Long projectId);
+    BasicMessageDto cancelInvitation(Long invitationId);
+
+    List<ProjectInteractionDto> getUserInvitations();
+
+    List<ProjectInteractionDto> getUserApplications();
+
+    List<UserInteractionDto> getProjectApplications(Long projectId);
+
+    List<UserInteractionDto> getProjectInvitations(Long projectId);
 }

@@ -96,7 +96,7 @@ public class ProjectServiceImpl implements ProjectService {
         existingConfig.setIsPublic(dto.getIsPublic());
         existingConfig.setMaxParticipants(dto.getMaxParticipants());
 
-        projectRepo.save(existingProject);
+        projectRepo.save(existingProject); // cascade active
 
         PublicProjectDto generalInfo = maperToDto(existingProject);
         ConfigDto configInfo = ConfigDto.builder().id(existingConfig.getId()).isPublic(existingConfig.getIsPublic())
@@ -130,6 +130,10 @@ public class ProjectServiceImpl implements ProjectService {
         if (projectMemberRepo.existsByUserIdAndProjectId(loggedInUser.getId(), projectId))
             throw new UserAlreadyMemberException("You are already a member of this project.");
 
+        if (interactionRepo.existsByUserIdAndProjectIdAndStatus(loggedInUser.getId(), project.getId(),
+                ProjectInteraction.Status.PENDING))
+            throw new AlreadyExistsException("You already have a pending invitiation / application.");
+
         interactionRepo.save(
                 ProjectInteraction.builder()
                         .user(loggedInUser)
@@ -154,6 +158,10 @@ public class ProjectServiceImpl implements ProjectService {
         if (projectMemberRepo.existsByUserIdAndProjectId(userToBeInvited.getId(), projectId))
             throw new UserAlreadyMemberException("The user is already a member of this project.");
 
+        if (interactionRepo.existsByUserIdAndProjectIdAndStatus(userToBeInvited.getId(), existingProject.getId(),
+                ProjectInteraction.Status.PENDING))
+            throw new AlreadyExistsException("User already has a pending invitiation / application.");
+
         interactionRepo.save(
                 ProjectInteraction.builder()
                         .user(userToBeInvited)
@@ -167,7 +175,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public List<InteractionInvitationDto> getUserInvitations() {
+    public List<ProjectInteractionDto> getUserInvitations() {
         // User Placeholder
         User loggedInUser = userRepository.findById(1L)
                 .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
@@ -179,7 +187,7 @@ public class ProjectServiceImpl implements ProjectService {
                     Project project = interaction.getProject();
                     ProjectShortDto projectShortInfo = ProjectShortDto.builder().id(project.getId())
                             .title(project.getTitle()).build();
-                    return InteractionInvitationDto.builder()
+                    return ProjectInteractionDto.builder()
                             .project(projectShortInfo)
                             .initAt(interaction.getInitAt())
                             .comment(interaction.getInitComment()).build();
@@ -187,8 +195,49 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public List<ApplicationDto> getProjectApplications(Long projectId) {
-        validateOwnershipAndReturnProject(projectId);
+    public List<ProjectInteractionDto> getUserApplications() {
+        // User Placeholder
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        return interactionRepo
+                .findAllByUserIdAndTypeAndStatus(loggedInUser.getId(), ProjectInteraction.Type.APPLICATION,
+                        ProjectInteraction.Status.PENDING)
+                .stream()
+                .map((interaction) -> {
+                    Project project = interaction.getProject();
+                    ProjectShortDto projectShortInfo = ProjectShortDto.builder().id(project.getId())
+                            .title(project.getTitle()).build();
+                    return ProjectInteractionDto.builder()
+                            .project(projectShortInfo)
+                            .initAt(interaction.getInitAt())
+                            .comment(interaction.getInitComment()).build();
+                }).toList();
+    }
+
+    @Override
+    public List<UserInteractionDto> getProjectInvitations(Long projectId) {
+        validateOwnership(projectId);
+        return interactionRepo
+                .findAllByProjectIdAndTypeAndStatus(projectId, ProjectInteraction.Type.INVITATION,
+                        ProjectInteraction.Status.PENDING)
+                .stream()
+                .map((interaction) -> {
+                    User user = interaction.getUser();
+                    UserShortDto userShortInfo = UserShortDto.builder()
+                            .id(user.getId())
+                            .firstName(user.getFirstName())
+                            .lastName(user.getLastName())
+                            .email(user.getEmail()).build();
+                    return UserInteractionDto.builder()
+                            .user(userShortInfo)
+                            .initAt(interaction.getInitAt())
+                            .comment(interaction.getInitComment()).build();
+                }).toList();
+    }
+
+    @Override
+    public List<UserInteractionDto> getProjectApplications(Long projectId) {
+        validateOwnership(projectId);
         return interactionRepo
                 .findAllByProjectIdAndTypeAndStatus(projectId, ProjectInteraction.Type.APPLICATION,
                         ProjectInteraction.Status.PENDING)
@@ -200,7 +249,7 @@ public class ProjectServiceImpl implements ProjectService {
                             .firstName(user.getFirstName())
                             .lastName(user.getLastName())
                             .email(user.getEmail()).build();
-                    return ApplicationDto.builder()
+                    return UserInteractionDto.builder()
                             .user(userShortInfo)
                             .initAt(interaction.getInitAt())
                             .comment(interaction.getInitComment()).build();
@@ -208,13 +257,14 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    @Transactional
     public BasicMessageDto acceptApplication(Long applicationId) {
+        // USER PLACHOLDER
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+
         ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
 
-        if (application.getType() != ProjectInteraction.Type.APPLICATION)
-            throw new InvalidInteractionTypeException("This interaction is not an application.");
-
+        validateActiveApplication(application);
         Project project = validateOwnershipAndReturnProject(application.getProject().getId());
 
         application.setResponseDate(LocalDateTime.now());
@@ -222,12 +272,20 @@ public class ProjectServiceImpl implements ProjectService {
 
         interactionRepo.save(application);
 
-        // USER PLACHOLDER
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        /*
+         * Removed Transactional cause if for whatever reason user has a pending
+         * application / invitation and he is already a member (this should not happen,
+         * but added an additional check just in case), then we still want to throw an
+         * Exception before saving a new member, but that interaction that is pending
+         * should be changed to accepted.
+         */
+
+        if (!projectMemberRepo.existsByUserIdAndProjectId(application.getUser().getId(), project.getId()))
+            throw new UserAlreadyMemberException();
 
         projectMemberRepo
-                .save(ProjectMember.builder().user(userRepository.findById(loggedInUser.getId()).get()).project(project)
+                .save(ProjectMember.builder().user(application.getUser())
+                        .project(project)
                         .projectRole(ProjectMember.Role.USER).build());
 
         return new BasicMessageDto("User application to join the project has been accepted");
@@ -237,9 +295,7 @@ public class ProjectServiceImpl implements ProjectService {
     public BasicMessageDto declineApplication(Long applicationId) {
         ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
 
-        if (application.getType() != ProjectInteraction.Type.APPLICATION)
-            throw new InvalidInteractionTypeException("This interaction is not an application.");
-
+        validateActiveApplication(application);
         validateOwnership(application.getProject().getId());
 
         application.setResponseDate(LocalDateTime.now());
@@ -252,28 +308,100 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public BasicMessageDto acceptInvitation(Long invitationId) {
-        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
-
-        if (invitation.getType() != ProjectInteraction.Type.INVITATION)
-            throw new InvalidInteractionTypeException("This interaction is not an application.");
-
-         // USER PLACHOLDER
-         User loggedInUser = userRepository.findById(1L).orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
-
-        if()
-    }
-
-    @Override
-    public BasicMessageDto declineInvitation(Long invitationId) {
-        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
-
-        if (invitation.getType() != ProjectInteraction.Type.INVITATION)
-            throw new InvalidInteractionTypeException("This interaction is not an application.");
-
         // USER PLACHOLDER
         User loggedInUser = userRepository.findById(1L)
                 .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
 
+        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
+
+        validateActiveInvitationForUser(invitation, loggedInUser.getId());
+
+        invitation.setResponseDate(LocalDateTime.now());
+        invitation.setStatus(ProjectInteraction.Status.ACCEPTED);
+
+        interactionRepo.save(invitation);
+
+        Long userId = loggedInUser.getId();
+        Project project = invitation.getProject();
+
+        if (projectMemberRepo.existsByUserIdAndProjectId(userId, project.getId()))
+            throw new UserAlreadyMemberException();
+
+        projectMemberRepo.save(ProjectMember.builder().user(loggedInUser)
+                .project(project)
+                .projectRole(ProjectMember.Role.USER)
+                .build());
+
+        return new BasicMessageDto("Project invitation has succefully been accepted.");
+    }
+
+    @Override
+    public BasicMessageDto declineInvitation(Long invitationId) {
+        // USER PLACHOLDER
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+
+        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
+
+        validateActiveInvitationForUser(invitation, loggedInUser.getId());
+
+        invitation.setResponseDate(LocalDateTime.now());
+        invitation.setStatus(ProjectInteraction.Status.DECLINED);
+
+        interactionRepo.save(invitation);
+        return new BasicMessageDto("Project invitation has succefully been declined.");
+    }
+
+    @Override
+    public BasicMessageDto cancelApplication(Long applicationId) {
+        // USER PLACHOLDER
+        User loggedInUser = userRepository.findById(1L)
+                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
+
+        validateActiveApplication(application);
+
+        if (application.getUser().getId() != loggedInUser.getId())
+            throw new ForbiddenException("Users are not allowed to manage other user's applications / invitations");
+
+        interactionRepo.delete(application);
+
+        return new BasicMessageDto("Project application has succefully been calceled.");
+
+    }
+
+    @Override
+    public BasicMessageDto cancelInvitation(Long invitationId) {
+        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
+        validateOwnership(invitation.getProject().getId());
+
+        if (invitation.getType() != ProjectInteraction.Type.INVITATION)
+            throw new InvalidInteractionException("This interaction is not an invitation.");
+
+        if (invitation.getStatus() != ProjectInteraction.Status.PENDING)
+            throw new InvalidInteractionException("This invitation has already been reviewed.");
+
+        interactionRepo.delete(invitation);
+        return new BasicMessageDto("Project invitation has been succefully canceled.");
+    }
+
+    private void validateActiveInvitationForUser(ProjectInteraction invitation, Long loggedinUserId) {
+        if (invitation.getType() != ProjectInteraction.Type.INVITATION)
+            throw new InvalidInteractionException("This interaction is not an invitation.");
+
+        if (invitation.getStatus() != ProjectInteraction.Status.PENDING)
+            throw new InvalidInteractionException("This invitation has already been reviewed.");
+
+        if (invitation.getUser().getId() != loggedinUserId)
+            throw new ForbiddenException("Users are not allowed to manage other user's applications / invitations");
+    }
+
+    private void validateActiveApplication(ProjectInteraction application) {
+        if (application.getType() != ProjectInteraction.Type.APPLICATION)
+            throw new InvalidInteractionException("This interaction is not an application.");
+
+        if (application.getStatus() != ProjectInteraction.Status.PENDING)
+            throw new InvalidInteractionException("This application has already been reviewew.");
     }
 
     private ProjectInteraction validateAndReturnProjectInteraction(Long interactionId) {
