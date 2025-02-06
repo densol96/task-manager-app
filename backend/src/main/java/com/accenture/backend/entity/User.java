@@ -38,4 +38,8 @@ public class User {
     protected void onCreate() {
         createdAt = new Timestamp(System.currentTimeMillis());
     }
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private MessagePrivacy messagePrivacy = MessagePrivacy.ANYONE;
 }
