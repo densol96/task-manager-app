@@ -1,10 +1,11 @@
 package com.accenture.backend.controller.advice;
 
 import com.accenture.backend.dto.response.BasicErrorDto;
-import com.accenture.backend.exception.custom.EmailAlreadyInUseException;
+import com.accenture.backend.exception.EmailAlreadyInUseException;
 import com.accenture.backend.util.ErrorMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -21,6 +22,12 @@ public class ControllerExceptionAdvice {
     @ExceptionHandler(EmailAlreadyInUseException.class)
     public ResponseEntity<ErrorMessage> EmailAlreadyInUseHandler() {
         ErrorMessage errorDetails = new ErrorMessage("Email already in use");
+        return ResponseEntity.badRequest().body(errorDetails);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorMessage> BadCredentialsHandler() {
+        ErrorMessage errorDetails = new ErrorMessage("You password is incorrect");
         return ResponseEntity.badRequest().body(errorDetails);
     }
 
