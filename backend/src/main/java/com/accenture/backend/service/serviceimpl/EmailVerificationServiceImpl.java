@@ -1,4 +1,4 @@
-package com.accenture.backend.service.verificationservice;
+package com.accenture.backend.service.serviceimpl;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;

@@ -1,4 +1,4 @@
-package com.accenture.backend.model;
+package com.accenture.backend.enums;
 
 public enum ProjectSortBy {
     TITLE("title"), CREATEDAT("createdAt");

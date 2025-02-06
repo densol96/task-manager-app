@@ -1,0 +1,12 @@
+package com.accenture.backend.service;
+
+import com.accenture.backend.dto.user.UserInfoDto;
+import org.springframework.security.core.userdetails.UserDetailsService;
+
+public interface UserService extends UserDetailsService {
+
+     void createUser(UserInfoDto userInfoDto);
+
+     boolean userExists(String email);
+
+}
