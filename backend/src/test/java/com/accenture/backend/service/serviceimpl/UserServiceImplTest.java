@@ -1,8 +1,11 @@
 package com.accenture.backend.service.serviceimpl;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import static org.mockito.Mockito.*;
 
 import com.accenture.backend.dto.user.UserInfoDto;
 import com.accenture.backend.dto.user.UserRoleDto;
@@ -14,6 +17,7 @@ import com.accenture.backend.repository.UserRepository;
 import com.accenture.backend.util.SecurityUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -106,7 +110,7 @@ public class UserServiceImplTest {
                 .build();
 
         when(userRepository.countUserByEmail(email)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+        when(passwordEncoder.encode(ArgumentMatchers.anyString())).thenReturn("encodedPassword");
         when(userMapper.userInfoDtoToUser(any(UserInfoDto.class))).thenReturn(new User());
 
         userService.createUser(userInfoDto);
@@ -137,5 +141,10 @@ public class UserServiceImplTest {
 
         assertFalse(userService.userExists(email));
         verify(userRepository, times(1)).countUserByEmail(email);
+    }
+
+    @Test
+    void changePassword_Success(){
+
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+
 @Configuration
 @EnableWebSecurity
 @AllArgsConstructor
@@ -22,7 +23,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/login/**", "/sign-up/**").permitAll()
+                        .requestMatchers("/login/**", "/sign-up/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/user/email-request").hasRole("NOT_CONFIRMED")
                         .requestMatchers("/api/v1/user/email-code/**").hasRole("NOT_CONFIRMED")
                         .requestMatchers("/api/v1/user/**").hasRole("USER")

@@ -1,7 +1,7 @@
 package com.accenture.backend.service.serviceimpl;
 
 import com.accenture.backend.entity.Notification;
-import com.accenture.backend.entity.User; //
+import com.accenture.backend.entity.User;
 import com.accenture.backend.repository.NotificationRepository;
 
 import lombok.RequiredArgsConstructor;
