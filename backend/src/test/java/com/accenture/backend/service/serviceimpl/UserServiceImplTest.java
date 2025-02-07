@@ -24,7 +24,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
-
 public class UserServiceImplTest {
 
     @Mock
@@ -56,7 +55,7 @@ public class UserServiceImplTest {
                 .role(Role.USER)
                 .build();
 
-        UserRoleDto userRoleDto = new UserRoleDto("john.doe@example.com",
+        UserRoleDto userRoleDto = new UserRoleDto(null, "john.doe@example.com",
                 "securePass123", Role.USER);
 
         when(userRepository.findUserByEmail(email)).thenReturn(Optional.of(user));
@@ -93,7 +92,6 @@ public class UserServiceImplTest {
         verify(userRepository, times(1)).countUserByEmail(email);
         verify(userRepository, times(0)).save(any(User.class));
     }
-
 
     @Test
     void createUser_newUser() {

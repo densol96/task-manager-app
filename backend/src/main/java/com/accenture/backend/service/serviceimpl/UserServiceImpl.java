@@ -81,4 +81,11 @@ public class UserServiceImpl implements UserService {
         }
         return ((SecurityUser) authentication.getPrincipal()).getId();
     }
+
+    @Override
+    public UserRoleDto getIdentity() {
+        Long loggedInUserId = getLoggedInUserId();
+        User user = userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException());
+        return userMapper.userToLoginDto(user);
+    }
 }

@@ -2,6 +2,9 @@ package com.accenture.backend.config.security;
 
 import com.accenture.backend.util.JwtAuthenticationFilter;
 import lombok.AllArgsConstructor;
+
+import java.util.Arrays;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,6 +13,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
 
 @Configuration
 @EnableWebSecurity
@@ -21,8 +25,21 @@ public class SecurityConfig {
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 http.csrf(AbstractHttpConfigurer::disable)
+                                .cors(cors -> cors.configurationSource(request -> {
+                                        CorsConfiguration config = new CorsConfiguration();
+                                        config.setAllowedOrigins(
+                                                        Arrays.asList("http://localhost:3000"));
+
+                                        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE",
+                                                        "OPTIONS"));
+                                        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+                                        config.setAllowCredentials(true);
+                                        return config;
+                                }))
                                 .authorizeHttpRequests(authorize -> authorize
-                                                .requestMatchers("/login/**", "/sign-up/**").permitAll()
+                                                .requestMatchers("/api/v1/login/**", "/api/v1/sign-up/**")
+                                                .permitAll()
+                                                .requestMatchers("/api/v1/identity/**").authenticated()
                                                 .requestMatchers("/api/v1/user/email").hasRole("NOT_CONFIRMED")
                                                 .requestMatchers("/api/v1/user/**").hasRole("NOT_CONFIRMED")
                                                 .requestMatchers("/api/v1/tasks/**").hasRole("NOT_CONFIRMED")
