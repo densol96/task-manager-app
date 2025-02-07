@@ -20,25 +20,25 @@ public class DiscussionServiceImpl {
     @Autowired
     private ProjectDiscussionMessageRepository projectDiscussionMessageRepository;
 
-    public ProjectDiscussion createDiscussion(String title, ProjectMember postedBy, Project project) {
+    /*public ProjectDiscussion createDiscussion(String title, ProjectMember postedBy, Project project) {
         ProjectDiscussion discussion = new ProjectDiscussion();
         discussion.setTitle(title);
         discussion.setPostedBy(postedBy);
         discussion.setProject(project);
         discussion.setCreatedAt(new java.util.Date());
         return projectDiscussionRepository.save(discussion);
-    }
+    }*/
 
     public List<ProjectDiscussionMessage> getMessagesForDiscussion(Integer discussionId) {
         return projectDiscussionMessageRepository.findByDiscussionId(discussionId);
     }
 
-    public ProjectDiscussionMessage addMessageToDiscussion(Integer discussionId, String message, ProjectMember postedBy) {
+    /*public ProjectDiscussionMessage addMessageToDiscussion(Integer discussionId, String message, ProjectMember postedBy) {
         ProjectDiscussionMessage discussionMessage = new ProjectDiscussionMessage();
         discussionMessage.setMessage(message);
         discussionMessage.setPostedBy(postedBy);
         discussionMessage.setDiscussion(new ProjectDiscussion(discussionId)); // Assuming you set the discussion by id
         discussionMessage.setCreatedAt(new java.util.Date());
         return projectDiscussionMessageRepository.save(discussionMessage);
-    }
+    }*/
 }
