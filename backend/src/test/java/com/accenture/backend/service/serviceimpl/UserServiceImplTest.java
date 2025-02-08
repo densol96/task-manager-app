@@ -142,4 +142,9 @@ public class UserServiceImplTest {
         assertFalse(userService.userExists(email));
         verify(userRepository, times(1)).countUserByEmail(email);
     }
+
+    @Test
+    void changePassword_Success(){
+
+    }
 }
