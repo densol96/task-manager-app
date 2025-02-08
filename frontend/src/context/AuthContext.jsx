@@ -36,8 +36,6 @@ const AuthProvider = ({ children }) => {
         },
       });
       setUser(response.data);
-      console.log("IMPORTANT ===> " + response.data);
-      console.log(jwt);
     } catch (e) {
       console.log(e);
       setUser(null);

@@ -1,11 +1,11 @@
 import styled from "styled-components";
-// import HeaderMenu from "./HeaderMenu";
-// import UserAvatar from "../features/authentication/UserAvatar";
+import Button from "./Button";
+import { useAuthContext } from "../context/AuthContext";
 
 const StyledHeader = styled.header`
-  background-color: var(--color-grey-0);
   padding: 1.2rem 4.8rem;
-  border-bottom: 1px solid var(--color-grey-100);
+  border-bottom: 2.5px solid var(--color-brand-600);
+  z-index: 1000;
 
   display: flex;
   gap: 2.4rem;
@@ -14,11 +14,13 @@ const StyledHeader = styled.header`
 `;
 
 function Header() {
+  const { logout, user } = useAuthContext();
   return (
     <StyledHeader>
-      HEADER
-      {/* <UserAvatar />
-      <HeaderMenu /> */}
+      <p>{user.email}</p>
+      <Button onClick={logout} size="small">
+        Logout
+      </Button>
     </StyledHeader>
   );
 }

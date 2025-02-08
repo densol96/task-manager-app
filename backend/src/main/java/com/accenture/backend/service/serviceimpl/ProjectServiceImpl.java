@@ -159,7 +159,6 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public BasicMessageDto makeProjectApplication(Long projectId, CommentDto dto) {
-        // User Placeholder
         Long loggedInUserId = userService.getLoggedInUserId();
 
         Project project = projectRepo.findById(projectId)
@@ -315,7 +314,7 @@ public class ProjectServiceImpl implements ProjectService {
          * should be changed to accepted.
          */
 
-        if (!projectMemberRepo.existsByUserIdAndProjectId(application.getUser().getId(), project.getId()))
+        if (projectMemberRepo.existsByUserIdAndProjectId(application.getUser().getId(), project.getId()))
             throw new UserAlreadyMemberException();
 
         projectMemberRepo
@@ -449,13 +448,11 @@ public class ProjectServiceImpl implements ProjectService {
         if (projectId < 1)
             throw new InvalidInputException("project ID", projectId);
 
-        // USER PLACHOLDER
-        User loggedInUser = userRepository.findById(1L)
-                .orElseThrow(() -> new EntityNotFoundException("No user found with the id of " + 1));
+        Long loggedInUserId = userService.getLoggedInUserId();
 
         ProjectMember currentProjectOwner = getProjectOwner(projectId);
 
-        if (currentProjectOwner.getUser().getId() != loggedInUser.getId())
+        if (currentProjectOwner.getUser().getId() != loggedInUserId)
             throw new ForbiddenException("You are not the owner of this project and cannot perform this action.");
 
         return currentProjectOwner;
@@ -515,11 +512,21 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private PublicProjectDto maperToDto(Project project) {
+        Long loggedInUserId = userService.getLoggedInUserId();
+
+        boolean isMember = project.getMembers().stream()
+                .anyMatch(member -> member.getId().equals(loggedInUserId));
+
+        boolean hasPendingRequest = interactionRepo.existsByUserIdAndProjectIdAndStatus(
+                loggedInUserId, project.getId(), ProjectInteraction.Status.PENDING);
+
         return PublicProjectDto.builder()
                 .id(project.getId())
                 .title(project.getTitle())
                 .description(project.getDescription())
                 .createdAt(project.getCreatedAt())
-                .owner(OwnerShortDto.fromEntity(getProjectOwner(project.getId()))).build();
+                .owner(OwnerShortDto.fromEntity(getProjectOwner(project.getId())))
+                .member(isMember)
+                .hasPendingRequest(hasPendingRequest).build();
     }
 }

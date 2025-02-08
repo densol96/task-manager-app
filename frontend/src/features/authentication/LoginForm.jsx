@@ -9,6 +9,7 @@ import Button from "../../ui/Button";
 import Input from "../../ui/Input";
 import axios from "axios";
 import { useAuthContext } from "../../context/AuthContext";
+import { errorParser } from "../../helpers/functions";
 
 export const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -24,7 +25,7 @@ export const LoginForm = () => {
       updateJwt(response.data);
       toast.success("Login succesfull");
     } catch (e) {
-      toast.error(e.response.data.message);
+      errorParser(e);
     }
   }
 

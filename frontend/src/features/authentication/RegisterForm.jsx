@@ -8,6 +8,7 @@ import { AppLink } from "../../ui/AppLink";
 import Button from "../../ui/Button";
 import Input from "../../ui/Input";
 import axios from "axios";
+import { errorParser } from "../../helpers/functions";
 
 export const RegisterForm = () => {
   const [email, setEmail] = useState("");
@@ -35,7 +36,7 @@ export const RegisterForm = () => {
       toast.success(<p>{response.data}</p>);
       cleanInputs();
     } catch (e) {
-      toast.error(e.response.data.error);
+      errorParser(e);
     }
   }
 
@@ -48,6 +49,7 @@ export const RegisterForm = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="text"
+          placeholder="example@mail.com"
         />
       </FormLine>
       <FormLine>
@@ -57,6 +59,7 @@ export const RegisterForm = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
+          placeholder="● ● ● ● ● ● ● ● ● "
         />
       </FormLine>
       <FormLine>
@@ -65,7 +68,8 @@ export const RegisterForm = () => {
           name="firstName"
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
-          type="password"
+          type="text"
+          placeholder="Name"
         />
       </FormLine>
       <FormLine>
@@ -74,7 +78,8 @@ export const RegisterForm = () => {
           name="lastName"
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
-          type="password"
+          type="text"
+          placeholder="Surname"
         />
       </FormLine>
       <Button>Submit</Button>

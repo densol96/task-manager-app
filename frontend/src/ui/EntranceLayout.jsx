@@ -8,7 +8,7 @@ const Layout = styled.div`
 `;
 
 const Wallpaper = styled.div`
-  box-shadow: -10px 0px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: -10px 0px 25px rgba(0, 0, 0, 0.25);
   background-image: url("/bg.jpg");
   background-size: cover;
   background-position: center;

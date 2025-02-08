@@ -8,11 +8,11 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class PublicProjectDto {
-
     private Long id;
     private String title;
     private String description;
     private LocalDateTime createdAt;
     private OwnerShortDto owner;
-
+    private boolean member;
+    private boolean hasPendingRequest;
 }

@@ -20,11 +20,11 @@ export const ForgotPasswordForm = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="text"
-          defaultValue="example@mail.com"
+          placeholder="example@mail.com"
         />
       </FormLine>
       <Button>Submit</Button>
-      <AppLink to="/login">Sign up</AppLink>
+      <AppLink to="/login">Sign in</AppLink>
       <AppLink to="/register">Create account</AppLink>
     </Form>
   );

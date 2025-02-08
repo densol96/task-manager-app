@@ -6,13 +6,14 @@ import GlobalStyles from "./styles/GlobalStyles";
 import AppLayout from "./ui/AppLayout";
 import ProtectedRoute from "./features/authentication/ProtectedRoute";
 
-import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import PageNotFound from "./pages/PageNotFound";
 import EntranceLayout from "./ui/EntranceLayout";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import { AuthProvider } from "./context/AuthContext";
+import AllProjects from "./pages/AllProjects";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +41,8 @@ function App() {
               >
                 <Route index element={<Navigate replace to="dashboard" />} />
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="projects-all" element={<AllProjects />} />
+                {/* <Route path="projects-mine" element={<Dashboard />} /> */}
               </Route>
               <Route element={<EntranceLayout />}>
                 <Route path="login" element={<Login />} />

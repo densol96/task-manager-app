@@ -36,6 +36,7 @@ const variations = {
 
     &:hover {
       background-color: var(--color-grey-50);
+      color: var(--color-grey-0);
     }
   `,
   danger: css`
@@ -43,7 +44,8 @@ const variations = {
     background-color: var(--color-red-700);
 
     &:hover {
-      background-color: var(--color-red-800);
+      background-color: var(--color-red-100) !important;
+      color: var(--color-grey-700);
     }
   `,
 };
@@ -52,6 +54,9 @@ const Button = styled.button`
   border: none;
   border-radius: var(--border-radius-sm);
   box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   ${(props) => sizes[props.size]}
   ${(props) => variations[props.variation]}

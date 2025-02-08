@@ -39,7 +39,9 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(authorize -> authorize
                                                 .requestMatchers("/api/v1/login/**", "/api/v1/sign-up/**")
                                                 .permitAll()
-                                                .requestMatchers("/api/v1/identity/**").authenticated()
+                                                .requestMatchers("/api/v1/identity/**", "/api/v1/projects/**")
+                                                .authenticated()
+                                                // .requestMatchers().hasRole("NOT_CONFIRMED")
                                                 .requestMatchers("/api/v1/user/email").hasRole("NOT_CONFIRMED")
                                                 .requestMatchers("/api/v1/user/**").hasRole("NOT_CONFIRMED")
                                                 .requestMatchers("/api/v1/tasks/**").hasRole("NOT_CONFIRMED")
