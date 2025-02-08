@@ -85,7 +85,7 @@ public class ProjectInteractionRepositoryTests {
     }
 
     @Test
-    public void findAllByUserIdAndTypeAndStatus_ReturnsEmptyList_WhenNoMatchingInteraction() {
+    public void findAllByUserIdAndTypeAndStatus_ReturnsEmptyList_WhenNoMatchingInvitation() {
         List<ProjectInteraction> results = interactionRepo.findAllByUserIdAndTypeAndStatus(
                 user.getId(), ProjectInteraction.Type.INVITATION, ProjectInteraction.Status.ACCEPTED);
 
@@ -106,7 +106,7 @@ public class ProjectInteractionRepositoryTests {
     }
 
     @Test
-    public void findAllByProjectIdAndTypeAndStatus_ReturnsEmptyList_WhenNoMatchingInteraction() {
+    public void findAllByProjectIdAndTypeAndStatus_ReturnsEmptyList_WhenNoMatchingApplication() {
         List<ProjectInteraction> results = interactionRepo.findAllByProjectIdAndTypeAndStatus(
                 project.getId(), ProjectInteraction.Type.APPLICATION, ProjectInteraction.Status.ACCEPTED);
 
