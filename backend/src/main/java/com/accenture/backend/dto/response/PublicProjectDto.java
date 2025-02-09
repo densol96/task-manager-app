@@ -1,6 +1,9 @@
 package com.accenture.backend.dto.response;
 
 import java.time.LocalDateTime;
+
+import com.accenture.backend.entity.ProjectMember;
+
 import lombok.*;
 
 @Getter
@@ -15,4 +18,5 @@ public class PublicProjectDto {
     private OwnerShortDto owner;
     private boolean member;
     private boolean hasPendingRequest;
+    private ProjectMember.Role projectRole;
 }

@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import com.accenture.backend.dto.request.AcceptProjectDto;
 import com.accenture.backend.dto.request.InvitationDto;
 import com.accenture.backend.dto.response.UserInteractionDto;
-import com.accenture.backend.dto.response.UserPublicInfoDto;
+import com.accenture.backend.dto.response.ProjectMemberInfoDto;
 import com.accenture.backend.dto.response.BasicMessageDto;
 import com.accenture.backend.dto.response.BasicNestedResponseDto;
 import com.accenture.backend.dto.response.ProjectInteractionDto;
@@ -55,7 +55,7 @@ public class ProjectController {
     }
 
     @GetMapping("/{projectId}/members")
-    public ResponseEntity<Page<UserPublicInfoDto>> getProjectMembers(@PathVariable Long projectId,
+    public ResponseEntity<Page<ProjectMemberInfoDto>> getProjectMembers(@PathVariable Long projectId,
             @RequestParam(required = false) Integer page,
             @RequestParam(defaultValue = "5") Integer size,
             @RequestParam(defaultValue = "all") String filterBy,
@@ -80,6 +80,22 @@ public class ProjectController {
     public ResponseEntity<BasicMessageDto> deleteProject(@PathVariable Long projectId) {
         return new ResponseEntity<>(projectService.deleteProject(projectId), HttpStatus.OK);
     }
+
+    @DeleteMapping("/{projectId}/leave")
+    public ResponseEntity<BasicMessageDto> leaveProject(@PathVariable Long projectId) {
+        return new ResponseEntity<>(projectService.leaveProject(projectId), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{projectMemberId}/kick")
+    public ResponseEntity<BasicMessageDto> excludeFromProject(@PathVariable Long projectMemberId) {
+        return new ResponseEntity<>(projectService.kickMemberOut(projectMemberId), HttpStatus.OK);
+    }
+
+    @GetMapping("/{projectId}")
+    public ResponseEntity<PublicProjectDto> getProjectInfo(@PathVariable Long projectId) {
+        return new ResponseEntity<>(projectService.getProjectInfo(projectId), HttpStatus.OK);
+    }
+
     // ========== Invitation Endpoints ==========
 
     @PostMapping("/{projectId}/invitation")

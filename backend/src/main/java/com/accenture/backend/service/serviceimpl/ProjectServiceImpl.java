@@ -14,7 +14,7 @@ import com.accenture.backend.dto.response.ProjectInteractionDto;
 import com.accenture.backend.dto.response.ProjectShortDto;
 import com.accenture.backend.dto.response.PublicProjectDto;
 import com.accenture.backend.dto.response.UserInteractionDto;
-import com.accenture.backend.dto.response.UserPublicInfoDto;
+import com.accenture.backend.dto.response.ProjectMemberInfoDto;
 import com.accenture.backend.dto.response.UserShortDto;
 import com.accenture.backend.service.ProjectService;
 import com.accenture.backend.service.UserService;
@@ -71,6 +71,19 @@ public class ProjectServiceImpl implements ProjectService {
     private Integer maxProjectAmountAllowed;
 
     @Override
+    public PublicProjectDto getProjectInfo(Long projectId) {
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new InvalidInputException("project ID", projectId));
+        ProjectConfiguration config = project.getConfig();
+        Long loggedInUserId = userService.getLoggedInUserId();
+
+        if (config.getIsPublic() == false && !projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
+            throw new ForbiddenException("You cannot see the private project's information unless you are a member.");
+
+        return projectToPublicProjectDto(project, null);
+    }
+
+    @Override
     public Page<PublicProjectDto> getPublicProjects(Integer page, Integer size, String sortBy, String sortDirection) {
         Long resultsTotal = projectRepo.countAllByConfigIsPublicTrue();
         if (resultsTotal == 0)
@@ -96,7 +109,8 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public Page<UserPublicInfoDto> getProjectMembers(Long projectId, Integer page, Integer size, String sortDirection) {
+    public Page<ProjectMemberInfoDto> getProjectMembers(Long projectId, Integer page, Integer size,
+            String sortDirection) {
         Long loggedInUserId = userService.getLoggedInUserId();
         if (!projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
             throw new ForbiddenException("Only members of the project can perform this action");
@@ -464,6 +478,59 @@ public class ProjectServiceImpl implements ProjectService {
         return new BasicMessageDto("Project invitation has been succefully canceled.");
     }
 
+    @Override
+    @Transactional
+    public BasicMessageDto kickMemberOut(Long projectMemberId) {
+        ProjectMember toBeKickedOut = projectMemberRepo.findById(projectMemberId)
+                .orElseThrow(() -> new InvalidInputException("project member id", projectMemberId));
+
+        if (toBeKickedOut.getProjectRole() == ProjectMember.Role.OWNER)
+            throw new ForbiddenException("It is imposiible to kick the owner of the project out.");
+
+        Project project = returnProjectForOwner(toBeKickedOut.getProject().getId());
+
+        projectMemberRepo.deleteById(projectMemberId);
+
+        String message = "The project owner has excluded you from the project " + project.getTitle() + "#"
+                + project.getId();
+
+        notificationRepo.save(Notification.builder()
+                .title("You have been removed from the project.")
+                .message(message)
+                .user(toBeKickedOut.getUser())
+                .build());
+
+        return new BasicMessageDto("Project member has been successfully excluded from the project.");
+    }
+
+    @Override
+    @Transactional
+    public BasicMessageDto leaveProject(Long projectId) {
+        Long loggedInUserId = userService.getLoggedInUserId();
+        ProjectMember projectMember = projectMemberRepo.findByUserIdAndProjectId(loggedInUserId, projectId).orElseThrow(
+                () -> new InvalidInputException("You are not a part of the project with the id of " + projectId));
+
+        if (projectMember.getProjectRole() == ProjectMember.Role.OWNER)
+            throw new ForbiddenException("Owner cannot leave the project. Consider deleting it.");
+
+        projectMemberRepo.delete(projectMember);
+
+        ProjectMember owner = getProjectOwner(projectId);
+        User whoLeft = projectMember.getUser();
+        Project project = projectMember.getProject();
+
+        String message = "The user with the email of " + whoLeft.getEmail() + " has left your project "
+                + project.getTitle() + "#"
+                + project.getId();
+
+        notificationRepo.save(Notification.builder()
+                .title("User has left the project.")
+                .message(message)
+                .user(owner.getUser())
+                .build());
+        return new BasicMessageDto("You have succesfully left the project.");
+    }
+
     private void validateActiveInvitation(ProjectInteraction invitation) {
         if (invitation.getType() != ProjectInteraction.Type.INVITATION)
             throw new InvalidInteractionException("This interaction is not an invitation.");
@@ -536,7 +603,6 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private ProjectSortBy parseProjectSortBy(String sortBy) {
-        ProjectSortBy sortByEnum;
         try {
             return ProjectSortBy.valueOf(sortBy.toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -551,9 +617,10 @@ public class ProjectServiceImpl implements ProjectService {
 
         Long loggedInUserId = userService.getLoggedInUserId();
 
-        boolean isMember = projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, project.getId());
+        ProjectMember projectMember = projectMemberRepo.findByUserIdAndProjectId(loggedInUserId, project.getId())
+                .orElse(null);
 
-        boolean hasPendingRequest = isMember ? false
+        boolean hasPendingRequest = projectMember != null ? false
                 : interactionRepo.existsByUserIdAndProjectIdAndStatus(
                         loggedInUserId, project.getId(), ProjectInteraction.Status.PENDING);
 
@@ -565,8 +632,10 @@ public class ProjectServiceImpl implements ProjectService {
                 .description(project.getDescription())
                 .createdAt(project.getCreatedAt())
                 .owner(ownerToShortDto(owner))
-                .member(isMember)
-                .hasPendingRequest(hasPendingRequest).build();
+                .member(projectMember == null ? false : true)
+                .hasPendingRequest(hasPendingRequest)
+                .projectRole(projectMember != null ? projectMember.getProjectRole() : null)
+                .build();
     }
 
     private OwnerShortDto ownerToShortDto(ProjectMember projectMember) {
@@ -620,7 +689,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .build();
     }
 
-    private UserPublicInfoDto projectMemberToUserPublicInfoDto(ProjectMember member) {
+    private ProjectMemberInfoDto projectMemberToUserPublicInfoDto(ProjectMember member) {
         if (member == null)
             throw new InvalidInputException("member", null);
 
@@ -628,7 +697,9 @@ public class ProjectServiceImpl implements ProjectService {
         if (user == null)
             throw new EntityNotFoundException("User associated with the project member is missing.");
 
-        return UserPublicInfoDto.builder()
+        return ProjectMemberInfoDto.builder()
+                .userId(user.getId())
+                .projectMemberId(member.getId())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())

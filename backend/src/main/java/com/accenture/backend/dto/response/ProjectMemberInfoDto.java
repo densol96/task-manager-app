@@ -13,7 +13,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserPublicInfoDto {
+public class ProjectMemberInfoDto {
+    private Long userId;
+    private Long projectMemberId;
     private String email;
     private String firstName;
     private String lastName;

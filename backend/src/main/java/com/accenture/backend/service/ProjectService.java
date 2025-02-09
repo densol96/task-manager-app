@@ -8,11 +8,14 @@ import com.accenture.backend.dto.request.*;
 import com.accenture.backend.dto.response.*;
 
 public interface ProjectService {
+
+    PublicProjectDto getProjectInfo(Long projectId);
+
     Page<PublicProjectDto> getPublicProjects(Integer page, Integer size, String sortBy, String sortDirection);
 
     Page<PublicProjectDto> getUserProjects(Integer page, Integer size, String sortBy, String sortDirection);
 
-    Page<UserPublicInfoDto> getProjectMembers(Long projectId, Integer page, Integer size, String sortDirection);
+    Page<ProjectMemberInfoDto> getProjectMembers(Long projectId, Integer page, Integer size, String sortDirection);
 
     BasicNestedResponseDto<ProjectDto> createNewProject(AcceptProjectDto dto);
 
@@ -35,6 +38,10 @@ public interface ProjectService {
     BasicMessageDto cancelApplication(Long applicationId);
 
     BasicMessageDto cancelInvitation(Long invitationId);
+
+    BasicMessageDto kickMemberOut(Long projectMemberId);
+
+    BasicMessageDto leaveProject(Long projectId);
 
     List<ProjectInteractionDto> getUserInvitations();
 
