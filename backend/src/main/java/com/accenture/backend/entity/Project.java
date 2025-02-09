@@ -13,7 +13,6 @@ import lombok.*;
 public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Setter(value = AccessLevel.NONE)
     private Long id;
 
     @Column(nullable = false)

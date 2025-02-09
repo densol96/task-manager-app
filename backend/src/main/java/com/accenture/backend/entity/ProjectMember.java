@@ -14,7 +14,6 @@ public class ProjectMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Setter(value = AccessLevel.NONE)
     private Long id;
 
     @ManyToOne

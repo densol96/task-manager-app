@@ -98,14 +98,15 @@ public class ProjectServiceImpl implements ProjectService {
                 ProjectMember.Role.OWNER) >= maxProjectAmountAllowed)
             throw new MaxProjectOwnerLimitExceededException();
 
-        Project newProject = Project.builder().title(dto.getTitle()).description(dto.getDescription()).build();
-        projectRepo.save(newProject);
+        Project newProject = projectRepo
+                .save(Project.builder().title(dto.getTitle()).description(dto.getDescription()).build());
 
         ProjectConfiguration config = ProjectConfiguration.builder()
                 .project(newProject)
                 .isPublic(dto.getIsPublic())
                 .maxParticipants(dto.getMaxParticipants())
                 .build();
+
         configRepo.save(config);
 
         projectMemberRepo
@@ -413,6 +414,9 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private void validateActiveInvitationForUser(ProjectInteraction invitation, Long loggedinUserId) {
+        if (invitation == null)
+            throw new InvalidInputException("application", null);
+
         if (invitation.getType() != ProjectInteraction.Type.INVITATION)
             throw new InvalidInteractionException("This interaction is not an invitation.");
 
@@ -424,6 +428,9 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private void validateActiveApplication(ProjectInteraction application) {
+        if (application == null)
+            throw new InvalidInputException("application", null);
+
         if (application.getType() != ProjectInteraction.Type.APPLICATION)
             throw new InvalidInteractionException("This interaction is not an application.");
 
@@ -432,7 +439,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private ProjectInteraction validateAndReturnProjectInteraction(Long interactionId) {
-        if (interactionId < 1)
+        if (interactionId == null || interactionId < 1)
             throw new InvalidInputException("project application ID", interactionId);
 
         return interactionRepo.findById(interactionId)
@@ -441,11 +448,13 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private Project validateOwnershipAndReturnProject(Long projectId) {
+        if (projectId == null || projectId < 1)
+            throw new InvalidInputException("project ID", projectId);
         return validateOwnership(projectId).getProject();
     }
 
     private ProjectMember validateOwnership(Long projectId) {
-        if (projectId < 1)
+        if (projectId == null || projectId < 1)
             throw new InvalidInputException("project ID", projectId);
 
         Long loggedInUserId = userService.getLoggedInUserId();
@@ -459,7 +468,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private ProjectMember getProjectOwner(Long projectId) {
-        if (projectId <= 0)
+        if (projectId == null || projectId <= 0)
             throw new InvalidInputException("project ID", projectId);
 
         if (!projectRepo.existsById(projectId))
@@ -512,13 +521,16 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private PublicProjectDto maperToDto(Project project) {
+        if (project == null)
+            throw new InvalidInputException("Project", null);
+
         Long loggedInUserId = userService.getLoggedInUserId();
 
-        boolean isMember = project.getMembers().stream()
-                .anyMatch(member -> member.getId().equals(loggedInUserId));
+        boolean isMember = projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, project.getId());
 
-        boolean hasPendingRequest = interactionRepo.existsByUserIdAndProjectIdAndStatus(
-                loggedInUserId, project.getId(), ProjectInteraction.Status.PENDING);
+        boolean hasPendingRequest = isMember ? false
+                : interactionRepo.existsByUserIdAndProjectIdAndStatus(
+                        loggedInUserId, project.getId(), ProjectInteraction.Status.PENDING);
 
         return PublicProjectDto.builder()
                 .id(project.getId())

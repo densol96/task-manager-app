@@ -20,10 +20,10 @@ public class OwnerShortDto {
                 User asUser = projectMember.getUser();
 
                 return OwnerShortDto.builder()
-                                .userId(asUser == null ? null : asUser.getId())
+                                .userId(asUser.getId())
                                 .memberId(projectMember.getId())
-                                .firstName(asUser == null ? null : asUser.getFirstName())
-                                .lastName(asUser == null ? null : asUser.getLastName())
-                                .email(asUser == null ? null : asUser.getEmail()).build();
+                                .firstName(asUser.getFirstName())
+                                .lastName(asUser.getLastName())
+                                .email(asUser.getEmail()).build();
         }
 }
