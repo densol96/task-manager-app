@@ -18,7 +18,7 @@ public interface ProjectService {
 
     BasicMessageDto deleteProject(Long projectId);
 
-    BasicMessageDto makeProjectApplication(Long projectId, CommentDto dto);
+    BasicMessageDto makeProjectApplication(Long projectId);
 
     BasicMessageDto makeProjectInvitation(Long projectId, InvitationDto dto);
 

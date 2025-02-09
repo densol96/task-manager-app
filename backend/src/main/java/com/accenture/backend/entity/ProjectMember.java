@@ -10,6 +10,8 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProjectMember {
 
     @Id
@@ -32,24 +34,19 @@ public class ProjectMember {
     private LocalDateTime joinDate;
 
     @OneToMany(mappedBy = "postedBy", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<ProjectDiscussion> discussions = new ArrayList<>();
 
     @OneToMany(mappedBy = "postedBy", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<ProjectDiscussionMessage> discussionMessages = new ArrayList<>();
 
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<MemberTaskAssignment> taskAssignments = new ArrayList<>();
 
     public static enum Role {
         OWNER, MANAGER, USER
-    }
-
-    @Builder
-    public ProjectMember(User user, Project project, Role projectRole, LocalDateTime joinDate) {
-        this.user = user;
-        this.project = project;
-        this.projectRole = (projectRole != null) ? projectRole : Role.USER;
-        this.joinDate = joinDate;
     }
 
     @PrePersist
@@ -58,5 +55,4 @@ public class ProjectMember {
             joinDate = LocalDateTime.now();
         }
     }
-
 }

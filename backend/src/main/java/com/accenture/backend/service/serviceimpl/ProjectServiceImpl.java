@@ -53,7 +53,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProjectServiceImpl implements ProjectService {
@@ -71,22 +73,24 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public Page<PublicProjectDto> getPublicProjects(Integer page, Integer size, String sortBy, String sortDirection) {
         Long resultsTotal = projectRepo.countAllByConfigIsPublicTrue();
+        if (resultsTotal == 0) {
+            return Page.empty();
+        }
         Pageable pageable = validatePageableInput(page, size, resultsTotal, sortBy, sortDirection);
         Page<Project> projects = projectRepo.findAllByConfigIsPublicTrue(pageable);
-        return projects.map(project -> maperToDto(project));
+        return projects.map(project -> projectToPublicProjectDto(project, null));
     }
 
     @Override
     public Page<PublicProjectDto> getUserProjects(Integer page, Integer size, String sortBy, String sortDirection) {
         Long loggedInUserId = userService.getLoggedInUserId();
         Long resultsTotal = projectMemberRepo.countAllByUserId(loggedInUserId);
+        if (resultsTotal == 0) {
+            return Page.empty();
+        }
         Pageable pageable = validatePageableInput(page, size, resultsTotal, sortBy, sortDirection);
-        /*
-         * findProjectsByUserId uses a join with projectMembers via JPQL => above check
-         * is acceptable
-         */
         Page<Project> projects = projectRepo.findProjectsByUserId(loggedInUserId, pageable);
-        return projects.map(project -> maperToDto(project));
+        return projects.map(project -> projectToPublicProjectDto(project, null));
     }
 
     @Override
@@ -101,24 +105,24 @@ public class ProjectServiceImpl implements ProjectService {
         Project newProject = projectRepo
                 .save(Project.builder().title(dto.getTitle()).description(dto.getDescription()).build());
 
-        ProjectConfiguration config = ProjectConfiguration.builder()
+        ProjectConfiguration config = configRepo.save(ProjectConfiguration.builder()
                 .project(newProject)
                 .isPublic(dto.getIsPublic())
                 .maxParticipants(dto.getMaxParticipants())
+                .build());
+
+        ProjectMember owner = projectMemberRepo.save(ProjectMember.builder()
+                .user(userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException()))
+                .project(newProject)
+                .projectRole(ProjectMember.Role.OWNER)
+                .build());
+
+        PublicProjectDto generalInfo = projectToPublicProjectDto(newProject, owner);
+        ConfigDto configInfo = ConfigDto.builder()
+                .id(config.getId())
+                .isPublic(config.getIsPublic())
+                .maxParticipants(config.getMaxParticipants())
                 .build();
-
-        configRepo.save(config);
-
-        projectMemberRepo
-                .save(ProjectMember.builder()
-                        .user(userRepository.findById(loggedInUserId)
-                                .orElseThrow(() -> new AuthenticationRuntimeException()))
-                        .project(newProject)
-                        .projectRole(ProjectMember.Role.OWNER).build());
-
-        PublicProjectDto generalInfo = maperToDto(newProject);
-        ConfigDto configInfo = ConfigDto.builder().id(config.getId()).isPublic(config.getIsPublic())
-                .maxParticipants(config.getMaxParticipants()).build();
 
         return new BasicNestedResponseDto<ProjectDto>(
                 "New project has been succefully created",
@@ -128,18 +132,23 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional
     public BasicNestedResponseDto<ProjectDto> updateExistingProject(Long projectId, AcceptProjectDto dto) {
-        Project existingProject = validateOwnershipAndReturnProject(projectId);
+        Project existingProject = returnProjectForOwner(projectId);
 
         existingProject.setTitle(dto.getTitle());
         existingProject.setDescription(dto.getDescription());
 
         ProjectConfiguration existingConfig = existingProject.getConfig();
+
+        if (existingConfig == null)
+            throw new EntityNotFoundException(
+                    "Configuraion associated with project with the id of " + projectId + " is missing.");
+
         existingConfig.setIsPublic(dto.getIsPublic());
         existingConfig.setMaxParticipants(dto.getMaxParticipants());
 
         projectRepo.save(existingProject); // cascade active
 
-        PublicProjectDto generalInfo = maperToDto(existingProject);
+        PublicProjectDto generalInfo = projectToPublicProjectDto(existingProject, null);
         ConfigDto configInfo = ConfigDto.builder()
                 .id(existingConfig.getId())
                 .isPublic(existingConfig.getIsPublic())
@@ -151,47 +160,43 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    @Transactional
     public BasicMessageDto deleteProject(Long projectId) {
-        Project existingProject = validateOwnershipAndReturnProject(projectId);
-        projectRepo.delete(existingProject);
+        validateThatLoggedInUserIsOwner(projectId);
+        projectRepo.deleteById(projectId);
         return new BasicMessageDto("Project has been succesfully deleted");
     }
 
     @Override
-    public BasicMessageDto makeProjectApplication(Long projectId, CommentDto dto) {
-        Long loggedInUserId = userService.getLoggedInUserId();
-
-        Project project = projectRepo.findById(projectId)
-                .orElseThrow(() -> new EntityNotFoundException("Project", projectId));
-
-        if (!project.getConfig().getIsPublic())
+    public BasicMessageDto makeProjectApplication(Long projectId) {
+        if (!projectRepo.existsByIdAndConfigIsPublicTrue(projectId))
             throw new ForbiddenException("Users are not allowed to send applications to private projects.");
+
+        Long loggedInUserId = userService.getLoggedInUserId();
 
         if (projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
             throw new UserAlreadyMemberException("You are already a member of this project.");
 
-        if (interactionRepo.existsByUserIdAndProjectIdAndStatus(loggedInUserId, project.getId(),
+        if (interactionRepo.existsByUserIdAndProjectIdAndStatus(loggedInUserId, projectId,
                 ProjectInteraction.Status.PENDING))
             throw new AlreadyExistsException("You already have a pending invitiation / application.");
 
-        interactionRepo.save(
-                ProjectInteraction.builder()
-                        .user(userRepository.findById(loggedInUserId)
-                                .orElseThrow(() -> new AuthenticationRuntimeException()))
-                        .project(project)
-                        .type(ProjectInteraction.Type.APPLICATION)
-                        .status(ProjectInteraction.Status.PENDING)
-                        .initComment(dto.getComment()).build());
+        ProjectInteraction newApplication = ProjectInteraction.builder()
+                .user(userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException()))
+                .project(projectRepo.findById(projectId)
+                        .orElseThrow(() -> new EntityNotFoundException("No project found with the id of " + projectId)))
+                .type(ProjectInteraction.Type.APPLICATION)
+                .status(ProjectInteraction.Status.PENDING)
+                .build();
 
+        interactionRepo.save(newApplication);
         return new BasicMessageDto("Project application has been succesfully sent.");
     }
 
     @Override
     @Transactional
     public BasicMessageDto makeProjectInvitation(Long projectId, InvitationDto dto) {
-        Project existingProject = validateOwnershipAndReturnProject(projectId);
-        if (!(existingProject.getMembers().size() < existingProject.getConfig().getMaxParticipants()))
+        Project existingProject = returnProjectForOwner(projectId);
+        if (existingProject.getMembers().size() >= existingProject.getConfig().getMaxParticipants())
             throw new MaxParticipantsReachedException();
 
         User userToBeInvited = userRepository.findUserByEmail(dto.getEmail())
@@ -204,15 +209,14 @@ public class ProjectServiceImpl implements ProjectService {
                 ProjectInteraction.Status.PENDING))
             throw new AlreadyExistsException("User already has a pending invitiation / application.");
 
-        interactionRepo.save(
-                ProjectInteraction.builder()
-                        .user(userToBeInvited)
-                        .project(existingProject)
-                        .type(ProjectInteraction.Type.INVITATION)
-                        .status(ProjectInteraction.Status.PENDING)
-                        .initComment(dto.getComment())
-                        .build());
+        ProjectInteraction newInvitation = ProjectInteraction.builder()
+                .user(userToBeInvited)
+                .project(existingProject)
+                .type(ProjectInteraction.Type.INVITATION)
+                .status(ProjectInteraction.Status.PENDING)
+                .build();
 
+        interactionRepo.save(newInvitation);
         return new BasicMessageDto("Project invitation has been succesfully sent.");
     }
 
@@ -223,85 +227,44 @@ public class ProjectServiceImpl implements ProjectService {
                 .findAllByUserIdAndTypeAndStatus(loggedInUserId, ProjectInteraction.Type.INVITATION,
                         ProjectInteraction.Status.PENDING)
                 .stream()
-                .map((interaction) -> {
-                    Project project = interaction.getProject();
-                    ProjectShortDto projectShortInfo = ProjectShortDto.builder().id(project.getId())
-                            .title(project.getTitle()).build();
-                    return ProjectInteractionDto.builder()
-                            .project(projectShortInfo)
-                            .initAt(interaction.getInitAt())
-                            .comment(interaction.getInitComment()).build();
-                }).toList();
+                .map(this::interactionToProjectInteractionDtoMapper).toList();
     }
 
     @Override
     public List<ProjectInteractionDto> getUserApplications() {
         Long loggedInUserId = userService.getLoggedInUserId();
-
         return interactionRepo
                 .findAllByUserIdAndTypeAndStatus(loggedInUserId, ProjectInteraction.Type.APPLICATION,
                         ProjectInteraction.Status.PENDING)
                 .stream()
-                .map((interaction) -> {
-                    Project project = interaction.getProject();
-                    ProjectShortDto projectShortInfo = ProjectShortDto.builder().id(project.getId())
-                            .title(project.getTitle()).build();
-                    return ProjectInteractionDto.builder()
-                            .project(projectShortInfo)
-                            .initAt(interaction.getInitAt())
-                            .comment(interaction.getInitComment()).build();
-                }).toList();
+                .map(this::interactionToProjectInteractionDtoMapper).toList();
     }
 
     @Override
     public List<UserInteractionDto> getProjectInvitations(Long projectId) {
-        validateOwnership(projectId);
+        validateThatLoggedInUserIsOwner(projectId);
         return interactionRepo
                 .findAllByProjectIdAndTypeAndStatus(projectId, ProjectInteraction.Type.INVITATION,
                         ProjectInteraction.Status.PENDING)
                 .stream()
-                .map((interaction) -> {
-                    User user = interaction.getUser();
-                    UserShortDto userShortInfo = UserShortDto.builder()
-                            .id(user.getId())
-                            .firstName(user.getFirstName())
-                            .lastName(user.getLastName())
-                            .email(user.getEmail()).build();
-                    return UserInteractionDto.builder()
-                            .user(userShortInfo)
-                            .initAt(interaction.getInitAt())
-                            .comment(interaction.getInitComment()).build();
-                }).toList();
+                .map(this::interactionToUserInteractionDtoMapper).toList();
     }
 
     @Override
     public List<UserInteractionDto> getProjectApplications(Long projectId) {
-        validateOwnership(projectId);
+        validateThatLoggedInUserIsOwner(projectId);
         return interactionRepo
                 .findAllByProjectIdAndTypeAndStatus(projectId, ProjectInteraction.Type.APPLICATION,
                         ProjectInteraction.Status.PENDING)
                 .stream()
-                .map((interaction) -> {
-                    User user = interaction.getUser();
-                    UserShortDto userShortInfo = UserShortDto.builder()
-                            .id(user.getId())
-                            .firstName(user.getFirstName())
-                            .lastName(user.getLastName())
-                            .email(user.getEmail()).build();
-                    return UserInteractionDto.builder()
-                            .user(userShortInfo)
-                            .initAt(interaction.getInitAt())
-                            .comment(interaction.getInitComment()).build();
-                }).toList();
+                .map(this::interactionToUserInteractionDtoMapper).toList();
     }
 
     @Override
     public BasicMessageDto acceptApplication(Long applicationId) {
-        ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
-
+        ProjectInteraction application = findProjectInteraction(applicationId);
         validateActiveApplication(application);
-        Project project = validateOwnershipAndReturnProject(application.getProject().getId());
-
+        Project project = returnProjectForOwner(application.getProject().getId());
         application.setResponseDate(LocalDateTime.now());
         application.setStatus(ProjectInteraction.Status.ACCEPTED);
 
@@ -328,10 +291,10 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public BasicMessageDto declineApplication(Long applicationId) {
-        ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
+        ProjectInteraction application = findProjectInteraction(applicationId);
 
         validateActiveApplication(application);
-        validateOwnership(application.getProject().getId());
+        validateThatLoggedInUserIsOwner(application.getProject().getId());
 
         application.setResponseDate(LocalDateTime.now());
         application.setStatus(ProjectInteraction.Status.DECLINED);
@@ -345,9 +308,11 @@ public class ProjectServiceImpl implements ProjectService {
     public BasicMessageDto acceptInvitation(Long invitationId) {
         Long loggedInUserId = userService.getLoggedInUserId();
 
-        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
+        ProjectInteraction invitation = findProjectInteraction(invitationId);
 
-        validateActiveInvitationForUser(invitation, loggedInUserId);
+        validateActiveInvitation(invitation);
+        if (invitation.getUser().getId() != loggedInUserId)
+            throw new ForbiddenException("Users are not allowed to manage other user's invitations");
 
         invitation.setResponseDate(LocalDateTime.now());
         invitation.setStatus(ProjectInteraction.Status.ACCEPTED);
@@ -371,10 +336,10 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public BasicMessageDto declineInvitation(Long invitationId) {
         Long loggedInUserId = userService.getLoggedInUserId();
-
-        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
-        validateActiveInvitationForUser(invitation, loggedInUserId);
-
+        ProjectInteraction invitation = findProjectInteraction(invitationId);
+        validateActiveInvitation(invitation);
+        if (invitation.getUser().getId() != loggedInUserId)
+            throw new ForbiddenException("Users are not allowed to manage other user's invitations");
         invitation.setResponseDate(LocalDateTime.now());
         invitation.setStatus(ProjectInteraction.Status.DECLINED);
 
@@ -385,52 +350,33 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public BasicMessageDto cancelApplication(Long applicationId) {
         Long loggedInUserId = userService.getLoggedInUserId();
-
-        ProjectInteraction application = validateAndReturnProjectInteraction(applicationId);
-
+        ProjectInteraction application = findProjectInteraction(applicationId);
         validateActiveApplication(application);
-
         if (application.getUser().getId() != loggedInUserId)
-            throw new ForbiddenException("Users are not allowed to manage other user's applications / invitations");
-
+            throw new ForbiddenException("Users are not allowed to manage other user's applications");
         interactionRepo.delete(application);
-        return new BasicMessageDto("Project application has succefully been calceled.");
+        return new BasicMessageDto("Project application has succefully been canceled.");
 
     }
 
     @Override
     public BasicMessageDto cancelInvitation(Long invitationId) {
-        ProjectInteraction invitation = validateAndReturnProjectInteraction(invitationId);
-        validateOwnership(invitation.getProject().getId());
-
-        if (invitation.getType() != ProjectInteraction.Type.INVITATION)
-            throw new InvalidInteractionException("This interaction is not an invitation.");
-
-        if (invitation.getStatus() != ProjectInteraction.Status.PENDING)
-            throw new InvalidInteractionException("This invitation has already been reviewed.");
-
+        ProjectInteraction invitation = findProjectInteraction(invitationId);
+        validateThatLoggedInUserIsOwner(invitation.getProject().getId());
+        validateActiveInvitation(invitation);
         interactionRepo.delete(invitation);
         return new BasicMessageDto("Project invitation has been succefully canceled.");
     }
 
-    private void validateActiveInvitationForUser(ProjectInteraction invitation, Long loggedinUserId) {
-        if (invitation == null)
-            throw new InvalidInputException("application", null);
-
+    private void validateActiveInvitation(ProjectInteraction invitation) {
         if (invitation.getType() != ProjectInteraction.Type.INVITATION)
             throw new InvalidInteractionException("This interaction is not an invitation.");
 
         if (invitation.getStatus() != ProjectInteraction.Status.PENDING)
             throw new InvalidInteractionException("This invitation has already been reviewed.");
-
-        if (invitation.getUser().getId() != loggedinUserId)
-            throw new ForbiddenException("Users are not allowed to manage other user's applications / invitations");
     }
 
     private void validateActiveApplication(ProjectInteraction application) {
-        if (application == null)
-            throw new InvalidInputException("application", null);
-
         if (application.getType() != ProjectInteraction.Type.APPLICATION)
             throw new InvalidInteractionException("This interaction is not an application.");
 
@@ -438,60 +384,39 @@ public class ProjectServiceImpl implements ProjectService {
             throw new InvalidInteractionException("This application has already been reviewew.");
     }
 
-    private ProjectInteraction validateAndReturnProjectInteraction(Long interactionId) {
+    private ProjectInteraction findProjectInteraction(Long interactionId) {
         if (interactionId == null || interactionId < 1)
-            throw new InvalidInputException("project application ID", interactionId);
+            throw new InvalidInputException("project interaction ID", interactionId);
 
         return interactionRepo.findById(interactionId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "No project interaction found with the id of " + interactionId));
     }
 
-    private Project validateOwnershipAndReturnProject(Long projectId) {
-        if (projectId == null || projectId < 1)
-            throw new InvalidInputException("project ID", projectId);
-        return validateOwnership(projectId).getProject();
+    private Project returnProjectForOwner(Long projectId) {
+        validateThatLoggedInUserIsOwner(projectId);
+        return projectRepo.findById(projectId).orElseThrow(() -> new EntityNotFoundException("Project", projectId));
     }
 
-    private ProjectMember validateOwnership(Long projectId) {
-        if (projectId == null || projectId < 1)
-            throw new InvalidInputException("project ID", projectId);
-
+    private void validateThatLoggedInUserIsOwner(Long projectId) {
         Long loggedInUserId = userService.getLoggedInUserId();
-
-        ProjectMember currentProjectOwner = getProjectOwner(projectId);
-
-        if (currentProjectOwner.getUser().getId() != loggedInUserId)
-            throw new ForbiddenException("You are not the owner of this project and cannot perform this action.");
-
-        return currentProjectOwner;
+        if (!projectMemberRepo.existsByUserIdAndProjectIdAndProjectRole(loggedInUserId, projectId,
+                ProjectMember.Role.OWNER))
+            throw new ForbiddenException("You are not the owner and cannot perform this action.");
     }
 
     private ProjectMember getProjectOwner(Long projectId) {
         if (projectId == null || projectId <= 0)
             throw new InvalidInputException("project ID", projectId);
 
-        if (!projectRepo.existsById(projectId))
-            throw new EntityNotFoundException("Project", projectId);
-
         List<ProjectMember> owners = projectMemberRepo.findByProjectIdAndProjectRole(projectId,
                 ProjectMember.Role.OWNER);
-        /*
-         * In the current implementation the is only 1 owner, but in case it will be
-         * change to multi-ownership later, it makes sense to perform an additional
-         * check and return the 1st owner (in our version, though, it is the only owner
-         * as well).
-         * 
-         * If no owner found => This should not happen, however if, for whatever reason
-         * it does happen, throw ServiceUnavailableException.
-         * It will log actual exception's cause but return a general error message to
-         * the user.
-         */
-        if (owners.size() == 0)
-            throw new ServiceUnavailableException("No owner found for the project with the id of " + projectId);
+
+        if (owners.isEmpty())
+            throw new EntityNotFoundException("No owner found for the project with the id of " + projectId);
 
         if (owners.size() > 1) {
-            System.out.println("Multiple owners found for project " + projectId);
+            log.warn("Multiple owners found for project {}", projectId);
         }
 
         return owners.get(0);
@@ -520,7 +445,7 @@ public class ProjectServiceImpl implements ProjectService {
         return page == null ? PageRequest.of(0, Integer.MAX_VALUE, sort) : PageRequest.of(page - 1, size, sort);
     }
 
-    private PublicProjectDto maperToDto(Project project) {
+    private PublicProjectDto projectToPublicProjectDto(Project project, ProjectMember owner) {
         if (project == null)
             throw new InvalidInputException("Project", null);
 
@@ -532,13 +457,64 @@ public class ProjectServiceImpl implements ProjectService {
                 : interactionRepo.existsByUserIdAndProjectIdAndStatus(
                         loggedInUserId, project.getId(), ProjectInteraction.Status.PENDING);
 
+        owner = owner != null ? owner : getProjectOwner(project.getId());
+
         return PublicProjectDto.builder()
                 .id(project.getId())
                 .title(project.getTitle())
                 .description(project.getDescription())
                 .createdAt(project.getCreatedAt())
-                .owner(OwnerShortDto.fromEntity(getProjectOwner(project.getId())))
+                .owner(ownerToShortDto(owner))
                 .member(isMember)
                 .hasPendingRequest(hasPendingRequest).build();
+    }
+
+    private OwnerShortDto ownerToShortDto(ProjectMember projectMember) {
+        User user = projectMember.getUser();
+        if (user == null)
+            throw new EntityNotFoundException("User associated with the project member is missing.");
+
+        return OwnerShortDto.builder()
+                .userId(user.getId())
+                .memberId(projectMember.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail()).build();
+    }
+
+    private UserInteractionDto interactionToUserInteractionDtoMapper(ProjectInteraction interaction) {
+        if (interaction == null)
+            throw new InvalidInputException("project interaction", null);
+
+        User user = interaction.getUser();
+        if (user == null)
+            throw new EntityNotFoundException("User associated with the project interaction is missing.");
+
+        UserShortDto userShortInfo = UserShortDto.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail()).build();
+        return UserInteractionDto.builder()
+                .user(userShortInfo)
+                .initAt(interaction.getInitAt())
+                .build();
+    }
+
+    private ProjectInteractionDto interactionToProjectInteractionDtoMapper(ProjectInteraction interaction) {
+        if (interaction == null)
+            throw new InvalidInputException("project interaction", null);
+
+        Project project = interaction.getProject();
+        if (project == null)
+            throw new EntityNotFoundException("Project associated with the project interaction is missing.");
+
+        ProjectShortDto projectShortInfo = ProjectShortDto.builder().id(project.getId()).title(project.getTitle())
+                .build();
+
+        return ProjectInteractionDto.builder()
+                .project(projectShortInfo)
+                .initAt(interaction.getInitAt())
+                .build();
     }
 }
