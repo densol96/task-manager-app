@@ -51,7 +51,6 @@ public class ProjectInteractionRepositoryTest {
                                 .project(project)
                                 .type(ProjectInteraction.Type.INVITATION)
                                 .status(ProjectInteraction.Status.PENDING)
-                                .initComment("Init test comment1")
                                 .build();
 
                 ProjectInteraction interaction2 = ProjectInteraction.builder()
@@ -59,7 +58,6 @@ public class ProjectInteractionRepositoryTest {
                                 .project(project)
                                 .type(ProjectInteraction.Type.APPLICATION)
                                 .status(ProjectInteraction.Status.PENDING)
-                                .initComment("Init test comment2")
                                 .build();
 
                 ProjectInteraction interaction3 = ProjectInteraction.builder()
@@ -67,7 +65,6 @@ public class ProjectInteractionRepositoryTest {
                                 .project(project)
                                 .type(ProjectInteraction.Type.INVITATION)
                                 .status(ProjectInteraction.Status.DECLINED)
-                                .initComment("Init test comment")
                                 .build();
 
                 interactionRepo.saveAll(Arrays.asList(interaction1, interaction2, interaction3));
@@ -151,7 +148,6 @@ public class ProjectInteractionRepositoryTest {
                                 .project(project2)
                                 .type(ProjectInteraction.Type.INVITATION)
                                 .status(ProjectInteraction.Status.PENDING)
-                                .initComment("Test comment for project2")
                                 .build();
 
                 interactionRepo.save(interaction4);

@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.accenture.backend.dto.request.AcceptProjectDto;
-import com.accenture.backend.dto.request.CommentDto;
 import com.accenture.backend.dto.request.InvitationDto;
 import com.accenture.backend.dto.response.BasicMessageDto;
 import com.accenture.backend.dto.response.BasicNestedResponseDto;
@@ -15,12 +14,11 @@ import com.accenture.backend.dto.response.ProjectInteractionDto;
 import com.accenture.backend.dto.response.ProjectShortDto;
 import com.accenture.backend.dto.response.PublicProjectDto;
 import com.accenture.backend.dto.response.UserInteractionDto;
+import com.accenture.backend.dto.response.UserPublicInfoDto;
 import com.accenture.backend.dto.response.UserShortDto;
 import com.accenture.backend.service.ProjectService;
 import com.accenture.backend.service.UserService;
-
-import org.springframework.stereotype.Service;
-
+import com.accenture.backend.entity.Notification;
 import com.accenture.backend.entity.Project;
 import com.accenture.backend.entity.ProjectConfiguration;
 import com.accenture.backend.entity.ProjectInteraction;
@@ -35,8 +33,8 @@ import com.accenture.backend.exception.custom.InvalidInteractionException;
 import com.accenture.backend.exception.custom.MaxParticipantsReachedException;
 import com.accenture.backend.exception.custom.MaxProjectOwnerLimitExceededException;
 import com.accenture.backend.exception.custom.PageOutOfRangeException;
-import com.accenture.backend.exception.custom.ServiceUnavailableException;
 import com.accenture.backend.exception.custom.UserAlreadyMemberException;
+import com.accenture.backend.repository.NotificationRepository;
 import com.accenture.backend.repository.ProjectConfigurationRepository;
 import com.accenture.backend.repository.ProjectInteractionRepository;
 import com.accenture.backend.repository.ProjectMemberRepository;
@@ -46,6 +44,7 @@ import com.accenture.backend.enums.ProjectSortBy;
 
 import jakarta.transaction.Transactional;
 
+import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -65,6 +64,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectConfigurationRepository configRepo;
     private final UserRepository userRepository;
     private final ProjectInteractionRepository interactionRepo;
+    private final NotificationRepository notificationRepo;
     private final UserService userService;
 
     @Value("${app.projects.max-amount}")
@@ -73,10 +73,11 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public Page<PublicProjectDto> getPublicProjects(Integer page, Integer size, String sortBy, String sortDirection) {
         Long resultsTotal = projectRepo.countAllByConfigIsPublicTrue();
-        if (resultsTotal == 0) {
+        if (resultsTotal == 0)
             return Page.empty();
-        }
-        Pageable pageable = validatePageableInput(page, size, resultsTotal, sortBy, sortDirection);
+
+        Pageable pageable = validatePageableInput(page, size, resultsTotal, parseProjectSortBy(sortBy).fieldName(),
+                sortDirection);
         Page<Project> projects = projectRepo.findAllByConfigIsPublicTrue(pageable);
         return projects.map(project -> projectToPublicProjectDto(project, null));
     }
@@ -85,12 +86,29 @@ public class ProjectServiceImpl implements ProjectService {
     public Page<PublicProjectDto> getUserProjects(Integer page, Integer size, String sortBy, String sortDirection) {
         Long loggedInUserId = userService.getLoggedInUserId();
         Long resultsTotal = projectMemberRepo.countAllByUserId(loggedInUserId);
-        if (resultsTotal == 0) {
+        if (resultsTotal == 0)
             return Page.empty();
-        }
-        Pageable pageable = validatePageableInput(page, size, resultsTotal, sortBy, sortDirection);
+
+        Pageable pageable = validatePageableInput(page, size, resultsTotal, parseProjectSortBy(sortBy).fieldName(),
+                sortDirection);
         Page<Project> projects = projectRepo.findProjectsByUserId(loggedInUserId, pageable);
         return projects.map(project -> projectToPublicProjectDto(project, null));
+    }
+
+    @Override
+    public Page<UserPublicInfoDto> getProjectMembers(Long projectId, Integer page, Integer size, String sortDirection) {
+        Long loggedInUserId = userService.getLoggedInUserId();
+        if (!projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
+            throw new ForbiddenException("Only members of the project can perform this action");
+
+        Long resultsTotal = projectMemberRepo.countAllByProjectId(projectId);
+        if (resultsTotal == 0)
+            return Page.empty();
+
+        String sortField = "joinDate";
+        Pageable pageable = validatePageableInput(page, size, resultsTotal, sortField, sortDirection);
+        Page<ProjectMember> projects = projectMemberRepo.findByProjectId(projectId, pageable);
+        return projects.map(this::projectMemberToUserPublicInfoDto);
     }
 
     @Override
@@ -160,13 +178,27 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @Transactional
     public BasicMessageDto deleteProject(Long projectId) {
-        validateThatLoggedInUserIsOwner(projectId);
+        Project project = returnProjectForOwner(projectId);
+        List<User> users = projectMemberRepo.findUsersByProjectId(projectId);
         projectRepo.deleteById(projectId);
+
+        String message = project.getTitle() + " #" + project.getId() + " has been deleted by its owner.";
+        for (User user : users) {
+            notificationRepo
+                    .save(Notification.builder()
+                            .title("Project has been deleted")
+                            .message(message)
+                            .user(user)
+                            .build());
+        }
+
         return new BasicMessageDto("Project has been succesfully deleted");
     }
 
     @Override
+    @Transactional
     public BasicMessageDto makeProjectApplication(Long projectId) {
         if (!projectRepo.existsByIdAndConfigIsPublicTrue(projectId))
             throw new ForbiddenException("Users are not allowed to send applications to private projects.");
@@ -180,15 +212,31 @@ public class ProjectServiceImpl implements ProjectService {
                 ProjectInteraction.Status.PENDING))
             throw new AlreadyExistsException("You already have a pending invitiation / application.");
 
+        User whoIsMakingApplication = userRepository.findById(loggedInUserId)
+                .orElseThrow(() -> new AuthenticationRuntimeException());
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new EntityNotFoundException("No project found with the id of " + projectId));
+
         ProjectInteraction newApplication = ProjectInteraction.builder()
-                .user(userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException()))
-                .project(projectRepo.findById(projectId)
-                        .orElseThrow(() -> new EntityNotFoundException("No project found with the id of " + projectId)))
+                .user(whoIsMakingApplication)
+                .project(project)
                 .type(ProjectInteraction.Type.APPLICATION)
                 .status(ProjectInteraction.Status.PENDING)
                 .build();
 
         interactionRepo.save(newApplication);
+
+        ProjectMember owner = getProjectOwner(projectId);
+        String messsage = whoIsMakingApplication.getEmail() + "has appliad to join your project " + project.getTitle()
+                + "#" + projectId;
+
+        notificationRepo
+                .save(Notification.builder()
+                        .title("New project application")
+                        .message(messsage)
+                        .user(owner.getUser())
+                        .build());
+
         return new BasicMessageDto("Project application has been succesfully sent.");
     }
 
@@ -217,6 +265,15 @@ public class ProjectServiceImpl implements ProjectService {
                 .build();
 
         interactionRepo.save(newInvitation);
+
+        String message = "You have been invited to join project " + existingProject.getTitle() + "#" + projectId;
+        notificationRepo
+                .save(Notification.builder()
+                        .title("New project invitation")
+                        .message(message)
+                        .user(userToBeInvited)
+                        .build());
+
         return new BasicMessageDto("Project invitation has been succesfully sent.");
     }
 
@@ -261,73 +318,98 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @Transactional
     public BasicMessageDto acceptApplication(Long applicationId) {
         ProjectInteraction application = findProjectInteraction(applicationId);
         validateActiveApplication(application);
         Project project = returnProjectForOwner(application.getProject().getId());
+
+        User newMember = application.getUser();
+
+        if (projectMemberRepo.existsByUserIdAndProjectId(newMember.getId(), project.getId()))
+            throw new UserAlreadyMemberException();
+
         application.setResponseDate(LocalDateTime.now());
         application.setStatus(ProjectInteraction.Status.ACCEPTED);
 
         interactionRepo.save(application);
 
-        /*
-         * Removed Transactional cause if for whatever reason user has a pending
-         * application / invitation and he is already a member (this should not happen,
-         * but added an additional check just in case), then we still want to throw an
-         * Exception before saving a new member, but that interaction that is pending
-         * should be changed to accepted.
-         */
+        projectMemberRepo.save(ProjectMember.builder()
+                .user(newMember)
+                .project(project)
+                .projectRole(ProjectMember.Role.USER)
+                .build());
 
-        if (projectMemberRepo.existsByUserIdAndProjectId(application.getUser().getId(), project.getId()))
-            throw new UserAlreadyMemberException();
+        String message = "Your application to join project " + project.getTitle() + "#" + project.getId()
+                + "has been accepted";
 
-        projectMemberRepo
-                .save(ProjectMember.builder().user(application.getUser())
-                        .project(project)
-                        .projectRole(ProjectMember.Role.USER).build());
+        notificationRepo.save(Notification.builder()
+                .title("Application accepted")
+                .message(message)
+                .user(newMember)
+                .build());
 
         return new BasicMessageDto("User application to join the project has been accepted");
     }
 
     @Override
+    @Transactional
     public BasicMessageDto declineApplication(Long applicationId) {
         ProjectInteraction application = findProjectInteraction(applicationId);
 
         validateActiveApplication(application);
-        validateThatLoggedInUserIsOwner(application.getProject().getId());
+        Project project = returnProjectForOwner(application.getProject().getId());
 
         application.setResponseDate(LocalDateTime.now());
         application.setStatus(ProjectInteraction.Status.DECLINED);
 
         interactionRepo.save(application);
 
+        String message = "Your application to join project " + project.getTitle() + "#" + project.getId()
+                + "has been declined";
+
+        notificationRepo.save(Notification.builder()
+                .title("Application declined")
+                .message(message)
+                .user(application.getUser())
+                .build());
+
         return new BasicMessageDto("User application to join the project has been declined");
     }
 
     @Override
+    @Transactional
     public BasicMessageDto acceptInvitation(Long invitationId) {
         Long loggedInUserId = userService.getLoggedInUserId();
-
         ProjectInteraction invitation = findProjectInteraction(invitationId);
-
         validateActiveInvitation(invitation);
-        if (invitation.getUser().getId() != loggedInUserId)
+
+        User user = invitation.getUser();
+        if (user.getId() != loggedInUserId)
             throw new ForbiddenException("Users are not allowed to manage other user's invitations");
+
+        Project project = invitation.getProject();
+        if (projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, project.getId()))
+            throw new UserAlreadyMemberException();
 
         invitation.setResponseDate(LocalDateTime.now());
         invitation.setStatus(ProjectInteraction.Status.ACCEPTED);
 
         interactionRepo.save(invitation);
 
-        Project project = invitation.getProject();
-
-        if (projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, project.getId()))
-            throw new UserAlreadyMemberException();
-
         projectMemberRepo.save(ProjectMember.builder()
                 .user(userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException()))
                 .project(project)
                 .projectRole(ProjectMember.Role.USER)
+                .build());
+
+        String message = "User with email of " + user.getEmail() + " has accepted your invitation to join project "
+                + project.getTitle() + "#" + project.getId();
+
+        notificationRepo.save(Notification.builder()
+                .title("Invitation accepted")
+                .message(message)
+                .user(getProjectOwner(project.getId()).getUser())
                 .build());
 
         return new BasicMessageDto("Project invitation has succefully been accepted.");
@@ -338,12 +420,26 @@ public class ProjectServiceImpl implements ProjectService {
         Long loggedInUserId = userService.getLoggedInUserId();
         ProjectInteraction invitation = findProjectInteraction(invitationId);
         validateActiveInvitation(invitation);
-        if (invitation.getUser().getId() != loggedInUserId)
+
+        User user = invitation.getUser();
+
+        if (user.getId() != loggedInUserId)
             throw new ForbiddenException("Users are not allowed to manage other user's invitations");
+
         invitation.setResponseDate(LocalDateTime.now());
         invitation.setStatus(ProjectInteraction.Status.DECLINED);
-
         interactionRepo.save(invitation);
+
+        Project project = invitation.getProject();
+
+        String message = "User with email of " + user.getEmail() + " has declined your invitation to join project "
+                + project.getTitle() + "#" + project.getId();
+
+        notificationRepo.save(Notification.builder()
+                .title("Invitation declined")
+                .message(message)
+                .user(getProjectOwner(project.getId()).getUser())
+                .build());
         return new BasicMessageDto("Project invitation has succefully been declined.");
     }
 
@@ -434,15 +530,19 @@ public class ProjectServiceImpl implements ProjectService {
         if (page != null && page > totalPages)
             throw new PageOutOfRangeException(page, totalPages);
 
+        Sort sort = sortDirection.toLowerCase().equals("desc") ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        return page == null ? PageRequest.of(0, Integer.MAX_VALUE, sort) : PageRequest.of(page - 1, size, sort);
+    }
+
+    private ProjectSortBy parseProjectSortBy(String sortBy) {
         ProjectSortBy sortByEnum;
         try {
-            sortByEnum = ProjectSortBy.valueOf(sortBy.toUpperCase());
+            return ProjectSortBy.valueOf(sortBy.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new InvalidInputException("Projects can only be sorted by either date or title.");
+            // Default behaviour
+            return ProjectSortBy.CREATEDAT;
         }
-        Sort sort = sortDirection.toLowerCase().equals("desc") ? Sort.by(sortByEnum.fieldName()).descending()
-                : Sort.by(sortByEnum.fieldName()).ascending();
-        return page == null ? PageRequest.of(0, Integer.MAX_VALUE, sort) : PageRequest.of(page - 1, size, sort);
     }
 
     private PublicProjectDto projectToPublicProjectDto(Project project, ProjectMember owner) {
@@ -496,6 +596,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .lastName(user.getLastName())
                 .email(user.getEmail()).build();
         return UserInteractionDto.builder()
+                .id(interaction.getId())
                 .user(userShortInfo)
                 .initAt(interaction.getInitAt())
                 .build();
@@ -513,8 +614,26 @@ public class ProjectServiceImpl implements ProjectService {
                 .build();
 
         return ProjectInteractionDto.builder()
+                .id(interaction.getId())
                 .project(projectShortInfo)
                 .initAt(interaction.getInitAt())
+                .build();
+    }
+
+    private UserPublicInfoDto projectMemberToUserPublicInfoDto(ProjectMember member) {
+        if (member == null)
+            throw new InvalidInputException("member", null);
+
+        User user = member.getUser();
+        if (user == null)
+            throw new EntityNotFoundException("User associated with the project member is missing.");
+
+        return UserPublicInfoDto.builder()
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .projectRole(member.getProjectRole())
+                .joinDate(member.getJoinDate())
                 .build();
     }
 }

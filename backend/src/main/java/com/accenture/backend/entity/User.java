@@ -6,6 +6,8 @@ import lombok.*;
 import com.accenture.backend.enums.Role;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
@@ -32,6 +34,10 @@ public class User {
 
     @Column(name = "created_at")
     private Timestamp createdAt;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Notification> notifications = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

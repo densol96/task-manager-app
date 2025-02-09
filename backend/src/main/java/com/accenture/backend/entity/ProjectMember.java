@@ -28,7 +28,8 @@ public class ProjectMember {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role projectRole;
+    @Builder.Default
+    private Role projectRole = ProjectMember.Role.USER;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinDate;

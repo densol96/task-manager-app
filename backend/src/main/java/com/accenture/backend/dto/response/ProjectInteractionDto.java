@@ -2,8 +2,6 @@ package com.accenture.backend.dto.response;
 
 import java.time.LocalDateTime;
 
-import com.accenture.backend.entity.ProjectInteraction.*;
-
 import lombok.*;
 
 @Getter
@@ -11,6 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class ProjectInteractionDto {
+    private Long id;
     private ProjectShortDto project;
     private LocalDateTime initAt;
     private String comment;

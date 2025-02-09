@@ -1,9 +1,6 @@
 package com.accenture.backend.dto.response;
 
 import java.time.LocalDateTime;
-
-import com.accenture.backend.entity.ProjectInteraction.Status;
-
 import lombok.*;
 
 @Getter
@@ -11,6 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class UserInteractionDto {
+    private Long id;
     private UserShortDto user;
     private LocalDateTime initAt;
     private String comment;

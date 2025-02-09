@@ -12,6 +12,8 @@ public interface ProjectService {
 
     Page<PublicProjectDto> getUserProjects(Integer page, Integer size, String sortBy, String sortDirection);
 
+    Page<UserPublicInfoDto> getProjectMembers(Long projectId, Integer page, Integer size, String sortDirection);
+
     BasicNestedResponseDto<ProjectDto> createNewProject(AcceptProjectDto dto);
 
     BasicNestedResponseDto<ProjectDto> updateExistingProject(Long projectId, AcceptProjectDto dto);

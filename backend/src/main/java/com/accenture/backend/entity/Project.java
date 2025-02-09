@@ -10,9 +10,12 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Setter(value = AccessLevel.NONE)
     private Long id;
 
     @Column(nullable = false)
@@ -23,24 +26,20 @@ public class Project {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProjectMember> members = new ArrayList<>();
-
     @OneToOne(mappedBy = "project", cascade = CascadeType.ALL)
     private ProjectConfiguration config;
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ProjectMember> members = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<ProjectDiscussion> discussions = new ArrayList<>();
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Task> tasks = new ArrayList<>();
-
-    @Builder
-    public Project(String title, String description, LocalDateTime createdAt) {
-        this.title = title;
-        this.description = description;
-        this.createdAt = createdAt;
-    }
 
     @PrePersist
     public void onPrePersist() {
