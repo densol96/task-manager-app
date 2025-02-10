@@ -157,7 +157,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .build();
 
         return new BasicNestedResponseDto<ProjectDto>(
-                "New project has been succefully created",
+                "New project has been successfully created",
                 ProjectDto.builder().projectInfo(generalInfo).config(configInfo).build());
     }
 

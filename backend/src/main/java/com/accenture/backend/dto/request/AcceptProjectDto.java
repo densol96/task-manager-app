@@ -7,6 +7,7 @@ import lombok.*;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class AcceptProjectDto {
 
     @NotBlank(message = "Title cannot be empty")

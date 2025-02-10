@@ -1,354 +1,620 @@
 package com.accenture.backend.service.serviceimpl;
 
-import com.accenture.backend.dto.request.AcceptProjectDto;
-import com.accenture.backend.dto.response.BasicNestedResponseDto;
-import com.accenture.backend.dto.response.ProjectDto;
-import com.accenture.backend.dto.response.PublicProjectDto;
-import com.accenture.backend.entity.Project;
-import com.accenture.backend.entity.ProjectConfiguration;
-import com.accenture.backend.entity.ProjectInteraction;
-import com.accenture.backend.entity.ProjectMember;
-import com.accenture.backend.entity.User;
-import com.accenture.backend.exception.custom.AuthenticationRuntimeException;
-import com.accenture.backend.exception.custom.InvalidInputException;
-import com.accenture.backend.exception.custom.MaxProjectOwnerLimitExceededException;
-import com.accenture.backend.exception.custom.PageOutOfRangeException;
-import com.accenture.backend.repository.ProjectRepository;
-import com.accenture.backend.repository.UserRepository;
-import com.accenture.backend.service.UserService;
-import com.accenture.backend.repository.ProjectConfigurationRepository;
-import com.accenture.backend.repository.ProjectInteractionRepository;
-import com.accenture.backend.repository.ProjectMemberRepository;
+import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.lang.IllegalAccessException;
-import java.lang.NoSuchFieldException;
-import java.lang.reflect.Field;
+import com.accenture.backend.entity.User;
+import com.accenture.backend.dto.request.AcceptProjectDto;
+import com.accenture.backend.dto.response.BasicMessageDto;
+import com.accenture.backend.dto.response.BasicNestedResponseDto;
+import com.accenture.backend.dto.response.ProjectDto;
+import com.accenture.backend.dto.response.ProjectInteractionDto;
+import com.accenture.backend.dto.response.ProjectMemberInfoDto;
+import com.accenture.backend.dto.response.PublicProjectDto;
+import com.accenture.backend.dto.response.UserInteractionDto;
+import com.accenture.backend.entity.Notification;
+import com.accenture.backend.entity.Project;
+import com.accenture.backend.entity.ProjectMember;
+import com.accenture.backend.entity.ProjectConfiguration;
+import com.accenture.backend.entity.ProjectInteraction;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import com.accenture.backend.enums.Role;
 
-// class ProjectServiceImplTest {
+import com.accenture.backend.repository.NotificationRepository;
+import com.accenture.backend.repository.ProjectConfigurationRepository;
+import com.accenture.backend.repository.ProjectInteractionRepository;
+import com.accenture.backend.repository.ProjectMemberRepository;
+import com.accenture.backend.repository.ProjectRepository;
+import com.accenture.backend.repository.UserRepository;
 
-// @Mock
-// private ProjectRepository projectRepo;
+import com.accenture.backend.service.UserService;
+import com.accenture.backend.exception.custom.EntityNotFoundException;
+import com.accenture.backend.exception.custom.ForbiddenException;
+import com.accenture.backend.exception.custom.InvalidInputException;
+import com.accenture.backend.exception.custom.MaxProjectOwnerLimitExceededException;
+import com.accenture.backend.exception.custom.PageOutOfRangeException;
 
-// @Mock
-// private ProjectMemberRepository projectMemberRepo;
+public class ProjectServiceImplTest {
+        @Mock
+        private ProjectRepository projectRepo;
 
-// @Mock
-// private ProjectConfigurationRepository configRepo;
+        @Mock
+        private ProjectMemberRepository projectMemberRepo;
 
-// @Mock
-// private UserRepository userRepository;
+        @Mock
+        private ProjectConfigurationRepository configRepo;
 
-// @Mock
-// private ProjectInteractionRepository interactionRepo;
+        @Mock
+        private UserRepository userRepo;
 
-// @Mock
-// private UserService userService;
+        @Mock
+        private ProjectInteractionRepository interactionRepo;
 
-// @InjectMocks
-// private ProjectServiceImpl projectService;
+        @Mock
+        private NotificationRepository notificationRepo;
 
-// private User loggedInuser;
-// private ProjectMember loggedInuserAsOwner;
-// private Project project;
+        @Mock
+        private UserService userService;
 
-// @BeforeEach
-// void setUp() {
-// /*
-// * I have removed the opportunity to set up an id through Builder, as it is
-// * auto-generated by DB, however added a setter method to ease the tests and
-// * avoid using reflexions.
-// */
-// ProjectMember.builder().id(null);
-// MockitoAnnotations.openMocks(this);
-// ReflectionTestUtils.setField(projectService, "maxProjectAmountAllowed", 5);
+        @InjectMocks
+        private ProjectServiceImpl projectService;
 
-// loggedInuser =
-// User.builder().firstName("Solovjovs").firstName("Deniss").email("solo@test.com").build();
-// loggedInuser.setId(1L);
+        private User ownerUserInPublic;
+        private User ownerUserInPrivate;
+        private User pendingUserInPublic;
+        private User pendingUserInPrivate;
 
-// project = Project.builder()
-// .title("Test project").description("Test description").build();
-// project.setId(1L);
+        private Project publicProject;
+        private Project privateProject;
 
-// loggedInuserAsOwner =
-// ProjectMember.builder().user(loggedInuser).project(project)
-// .projectRole(ProjectMember.Role.OWNER)
-// .build();
-// loggedInuserAsOwner.setId(1L);
+        private ProjectMember ownerMemberInPublic;
+        private ProjectMember ownerMemberInPrivate;
 
-// ProjectConfiguration config =
-// ProjectConfiguration.builder().maxParticipants(dto.getMaxParticipants())
-// .isPublic(dto.getIsPublic()).project(newProject).build();
+        @BeforeEach
+        void setUp() throws NoSuchFieldException, IllegalAccessException {
+                MockitoAnnotations.openMocks(this);
 
-// }
+                Field maxProjectAmountAllowedField = ProjectServiceImpl.class
+                                .getDeclaredField("maxProjectAmountAllowed");
+                maxProjectAmountAllowedField.setAccessible(true);
+                maxProjectAmountAllowedField.set(projectService, 5);
 
-// @Test
-// public void getPublicProjects_ReturnsCorrectDto() throws
-// NoSuchFieldException, IllegalAccessException {
-// // Arrange
-// Long loggedInUserId = loggedInuser.getId();
-// Integer page = 1;
-// Integer size = 5;
-// String sortBy = "createdAt";
-// String sortDirection = "asc";
-// Pageable pageable = PageRequest.of(page - 1, size,
-// Sort.by(Sort.Order.asc(sortBy)));
+                //////////////
 
-// when(projectRepo.countAllByConfigIsPublicTrue()).thenReturn(1L);
-// when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
-// when(projectRepo.findAllByConfigIsPublicTrue(eq(pageable)))
-// .thenReturn(new PageImpl<>(Collections.singletonList(project), pageable, 1));
-// when(projectRepo.existsById(project.getId())).thenReturn(true);
-// when(projectMemberRepo.findByProjectIdAndProjectRole(project.getId(),
-// ProjectMember.Role.OWNER)).thenReturn(Arrays.asList(owner));
-// when(projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId,
-// project.getId())).thenReturn(true);
-// when(interactionRepo.existsByUserIdAndProjectIdAndStatus(loggedInUserId,
-// project.getId(),
-// ProjectInteraction.Status.PENDING)).thenReturn(false);
+                ownerUserInPublic = User.builder().id(1L).firstName("Deniss").lastName("Solovjovs")
+                                .email("solo@deni.com")
+                                .role(Role.USER).build();
+                ownerUserInPrivate = User.builder().id(2L).firstName("Davids").lastName("Solovjovs")
+                                .email("solo@davi.com")
+                                .role(Role.USER).build();
+                pendingUserInPublic = User.builder().id(3L).firstName("Man").lastName("One")
+                                .email("solo@deni2.com")
+                                .role(Role.USER).build();
+                pendingUserInPrivate = User.builder().id(4L).firstName("Man").lastName("Two")
+                                .email("solo@davi2.com")
+                                .role(Role.USER).build();
 
-// // Act
-// Page<PublicProjectDto> result = projectService.getPublicProjects(page, size,
-// sortBy, sortDirection);
+                publicProject = Project.builder().id(1L)
+                                .config(ProjectConfiguration.builder().id(1L).isPublic(true).build())
+                                .title("Public project").description("This is a public project").build();
+                privateProject = Project.builder().id(2L)
+                                .config(ProjectConfiguration.builder().id(2L).isPublic(false).build())
+                                .title("Private project").description("This is a private  project").build();
 
-// // Assert
-// assertThat(result).isNotNull();
-// assertThat(result.getContent()).hasSize(1);
+                ownerMemberInPublic = ProjectMember.builder().id(1L).project(publicProject).user(ownerUserInPublic)
+                                .projectRole(ProjectMember.Role.OWNER).build();
+                ownerMemberInPrivate = ProjectMember.builder().id(1L).project(privateProject).user(ownerUserInPrivate)
+                                .projectRole(ProjectMember.Role.OWNER).build();
 
-// PublicProjectDto dto = result.getContent().get(0);
-// assertThat(dto.getId()).isEqualTo(project.getId());
-// assertThat(dto.getTitle()).isEqualTo(project.getTitle());
-// assertThat(dto.getDescription()).isEqualTo(project.getDescription());
-// assertThat(dto.isMember()).isTrue();
-// assertThat(dto.isHasPendingRequest()).isFalse();
+                when(projectRepo.findById(publicProject.getId())).thenReturn(Optional.of(publicProject));
+                when(projectRepo.findById(privateProject.getId())).thenReturn(Optional.of(privateProject));
 
-// Pageable pageableResult = result.getPageable();
-// assertThat(pageableResult.getSort().toString()).contains(sortBy);
-// assertThat(pageableResult.getSort().toString()).contains(sortDirection.toUpperCase());
+                when(userRepo.findById(ownerUserInPublic.getId())).thenReturn(Optional.of(ownerUserInPublic));
+                when(userRepo.findById(ownerUserInPrivate.getId())).thenReturn(Optional.of(ownerUserInPrivate));
 
-// verify(projectRepo, times(1)).countAllByConfigIsPublicTrue();
-// verify(projectRepo,
-// times(1)).findAllByConfigIsPublicTrue(any(Pageable.class));
-// }
+                when(projectMemberRepo.findById(ownerMemberInPublic.getId()))
+                                .thenReturn(Optional.of(ownerMemberInPublic));
+                when(projectMemberRepo.findById(ownerMemberInPrivate.getId()))
+                                .thenReturn(Optional.of(ownerMemberInPrivate));
 
-// @Test
-// void getPublicProjects_ThrowsException_InvalidInput_Page() {
-// int invalidPage = -1;
-// int size = 10;
-// String sortBy = "date";
-// String sortDirection = "desc";
+                when(projectMemberRepo.existsByUserIdAndProjectId(ownerUserInPublic.getId(), publicProject.getId()))
+                                .thenReturn(true);
+                when(projectMemberRepo.existsByUserIdAndProjectId(ownerUserInPrivate.getId(), privateProject.getId()))
+                                .thenReturn(true);
+                when(projectMemberRepo.existsByUserIdAndProjectId(ownerUserInPublic.getId(), privateProject.getId()))
+                                .thenReturn(false);
+                when(projectMemberRepo.existsByUserIdAndProjectId(ownerUserInPrivate.getId(), publicProject.getId()))
+                                .thenReturn(false);
 
-// when(projectRepo.countAllByConfigIsPublicTrue()).thenReturn(1L);
+                when(projectMemberRepo.findByUserIdAndProjectId(ownerUserInPublic.getId(), publicProject.getId()))
+                                .thenReturn(Optional.of(ownerMemberInPublic));
+                when(projectMemberRepo.findByUserIdAndProjectId(ownerUserInPrivate.getId(), privateProject.getId()))
+                                .thenReturn(Optional.of(ownerMemberInPrivate));
+                when(projectMemberRepo.findByUserIdAndProjectId(ownerUserInPublic.getId(), privateProject.getId()))
+                                .thenReturn(Optional.empty());
+                when(projectMemberRepo.findByUserIdAndProjectId(ownerUserInPrivate.getId(), publicProject.getId()))
+                                .thenReturn(Optional.empty());
 
-// assertThrows(InvalidInputException.class, () -> {
-// projectService.getPublicProjects(invalidPage, size, sortBy, sortDirection);
-// });
-// }
+                when(projectMemberRepo.findByProjectIdAndProjectRole(publicProject.getId(), ProjectMember.Role.OWNER))
+                                .thenReturn(Collections.singletonList(ownerMemberInPublic));
+                when(projectMemberRepo.findByProjectIdAndProjectRole(privateProject.getId(), ProjectMember.Role.OWNER))
+                                .thenReturn(Collections.singletonList(ownerMemberInPrivate));
 
-// @Test
-// void getPublicProjects_ThrowsException_InvalidInput_Size() {
-// int page = 1;
-// int invalidSize = 0;
-// String sortBy = "date";
-// String sortDirection = "desc";
+                when(projectMemberRepo.existsByUserIdAndProjectIdAndProjectRole(ownerUserInPublic.getId(),
+                                publicProject.getId(),
+                                ProjectMember.Role.OWNER)).thenReturn(true);
 
-// assertThrows(InvalidInputException.class, () -> {
-// projectService.getPublicProjects(page, invalidSize, sortBy, sortDirection);
-// });
-// }
+                when(interactionRepo.existsByUserIdAndProjectIdAndStatus(pendingUserInPublic.getId(),
+                                publicProject.getId(),
+                                ProjectInteraction.Status.PENDING)).thenReturn(true);
+                when(interactionRepo.existsByUserIdAndProjectIdAndStatus(pendingUserInPrivate.getId(),
+                                privateProject.getId(),
+                                ProjectInteraction.Status.PENDING)).thenReturn(true);
+        }
 
-// @Test
-// void getPublicProjects_ThrowsException_PageOutOfRange() {
-// int page = 2;
-// int size = 10;
-// String sortBy = "date";
-// String sortDirection = "desc";
+        @Test
+        void getProjectInfo_NonMemberAndPrivateProject_ThrowsException() {
+                // Non-member tries to access a private project
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
 
-// when(projectRepo.countAllByConfigIsPublicTrue()).thenReturn(5L);
+                assertThrows(ForbiddenException.class, () -> projectService.getProjectInfo(privateProject.getId()));
+                verify(projectRepo, times(1)).findById(privateProject.getId());
+                verify(projectMemberRepo, times(0)).existsByUserIdAndProjectId(ownerUserInPrivate.getId(),
+                                privateProject.getId());
+        }
 
-// assertThrows(PageOutOfRangeException.class, () -> {
-// projectService.getPublicProjects(page, size, sortBy, sortDirection);
-// });
-// }
+        @Test
+        void getProjectInfo_MemberAndPrivateProject_ReturnsDto() {
+                // Member tries to access a private project
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPrivate.getId());
+                PublicProjectDto resultOkPrivate = projectService.getProjectInfo(privateProject.getId());
 
-// @Test
-// void getPublicProjects_ThrowsException_InvalidInput_SortBy() {
-// int page = 1;
-// int size = 10;
-// String invalidSortBy = "invalidField";
-// String sortDirection = "desc";
+                assertNotNull(resultOkPrivate, "The result should not be null");
+                verify(projectRepo, times(1)).findById(privateProject.getId());
+                verify(projectMemberRepo, times(1)).existsByUserIdAndProjectId(ownerUserInPrivate.getId(),
+                                privateProject.getId());
+        }
 
-// when(projectRepo.countAllByConfigIsPublicTrue()).thenReturn(5L);
+        @Test
+        void getProjectInfo_MemberAndPublicProject_ReturnsDto() {
+                // Member tries to access a public project
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
+                PublicProjectDto resultOkPublic = projectService.getProjectInfo(publicProject.getId());
 
-// InvalidInputException thrown = assertThrows(InvalidInputException.class, ()
-// -> {
-// projectService.getPublicProjects(page, size, invalidSortBy, sortDirection);
-// });
+                assertNotNull(resultOkPublic, "The result should not be null");
+                verify(projectRepo, times(1)).findById(publicProject.getId());
+                verify(projectMemberRepo, times(0)).existsByUserIdAndProjectId(ownerUserInPublic.getId(),
+                                publicProject.getId());
+        }
 
-// assertEquals("Projects can only be sorted by either date or title.",
-// thrown.getMessage());
-// }
+        @Test
+        void getPublicProjects_NoProjects_ReturnsEmptyPage() {
+                when(projectRepo.countAllByConfigIsPublicTrue()).thenReturn(0L);
+                Page<PublicProjectDto> result = projectService.getPublicProjects(0, 10, "title", "asc");
 
-// @Test
-// void createNewProject_Success() {
-// Long loggedInUserId = loggedInuser.getId();
-// AcceptProjectDto dto = new AcceptProjectDto("New Project", "Description",
-// true, 10);
+                assertNotNull(result, "The result should not be null");
+                assertTrue(result.isEmpty(), "The result should be empty");
+                verify(projectRepo, times(1)).countAllByConfigIsPublicTrue();
+                verify(projectRepo, times(0)).findAllByConfigIsPublicTrue(any(Pageable.class));
+        }
 
-// when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
-// when(projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId,
-// ProjectMember.Role.OWNER))
-// .thenReturn(0L);
+        @Test
+        void getPublicProjects_InvalidInputForPageable_ThrowsException() {
+                Page<Project> projectPage = new PageImpl<>(Collections.singletonList(publicProject));
+                when(projectRepo.findAllByConfigIsPublicTrue(any(Pageable.class))).thenReturn(projectPage);
+                when(projectRepo.countAllByConfigIsPublicTrue()).thenReturn(1L);
 
-// when(projectRepo.save(any(Project.class))).thenReturn(newProject);
-// when(configRepo.save(any(ProjectConfiguration.class))).thenReturn(new
-// ProjectConfiguration());
-// when(userRepository.findById(loggedInUserId)).thenReturn(Optional.of(user));
-// when(projectMemberRepo.save(any(ProjectMember.class))).thenReturn(owner);
-// when(projectRepo.existsById(newProject.getId())).thenReturn(true);
-// when(projectMemberRepo.findByProjectIdAndProjectRole(newProject.getId(),
-// ProjectMember.Role.OWNER)).thenReturn(Arrays.asList(owner));
+                assertThrows(InvalidInputException.class,
+                                () -> projectService.getPublicProjects(-1, 10, "title", "asc"));
 
-// // Act
-// BasicNestedResponseDto<ProjectDto> response =
-// projectService.createNewProject(dto);
+                assertThrows(InvalidInputException.class,
+                                () -> projectService.getPublicProjects(1, 0, "title", "asc"));
 
-// // Assert
-// assertThat(response).isNotNull();
-// assertThat(response.getMessage()).isEqualTo("New project has been succefully
-// created");
-// assertThat(response.getData()).isNotNull();
-// assertThat(response.getData().getProjectInfo()).isNotNull();
-// assertThat(response.getData().getConfig()).isNotNull();
-// assertThat(response.getData().getConfig().getMaxParticipants()).isEqualTo(dto.getMaxParticipants());
-// assertThat(response.getData().getConfig().getIsPublic()).isEqualTo(dto.getIsPublic());
-// assertThat(response.getData().getProjectInfo().getTitle()).isEqualTo(dto.getTitle());
+                assertThrows(PageOutOfRangeException.class,
+                                () -> projectService.getPublicProjects(2, 5, "title", "asc"));
+        }
 
-// verify(projectRepo, times(1)).save(any(Project.class));
-// verify(configRepo, times(1)).save(any(ProjectConfiguration.class));
-// verify(projectMemberRepo, times(1)).save(any(ProjectMember.class));
-// verify(projectMemberRepo,
-// times(1)).countAllByUserIdAndProjectRole(loggedInUserId,
-// ProjectMember.Role.OWNER);
-// verify(userRepository, times(1)).findById(loggedInUserId);
-// }
+        @Test
+        void getPublicProjects_Valid_ReturnsDto() {
+                Page<Project> projectPage = new PageImpl<>(Collections.singletonList(publicProject));
+                when(projectRepo.findAllByConfigIsPublicTrue(any(Pageable.class))).thenReturn(projectPage);
+                when(projectRepo.countAllByConfigIsPublicTrue()).thenReturn(1L);
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
 
-// @Test
-// void createNewProject_MaxProjectLimitExceeded() {
-// Long loggedInUserId = 1L;
-// AcceptProjectDto dto = new AcceptProjectDto("New Project", "Description",
-// true, 10);
+                Page<PublicProjectDto> result = projectService.getPublicProjects(1, 5, "title", "asc");
 
-// when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
-// when(projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId,
-// ProjectMember.Role.OWNER))
-// .thenReturn(10L);
+                assertFalse(result.isEmpty(), "The result should not be empty");
+                assertEquals(1L, result.getTotalElements(), "The total number of elements should be 1");
+                assertEquals(1, result.getContent().size(), "The content size should be 1");
 
-// assertThrows(MaxProjectOwnerLimitExceededException.class, () -> {
-// projectService.createNewProject(dto);
-// });
-// }
+                PublicProjectDto publicProjectDto = result.getContent().get(0);
+                assertEquals(publicProject.getId(), publicProjectDto.getId(), "Project IDs should match");
+                assertEquals(publicProject.getTitle(), publicProjectDto.getTitle(), "Project titles should match");
+                assertEquals(publicProject.getDescription(), publicProjectDto.getDescription(),
+                                "Project descriptions should match");
+                assertEquals(publicProject.getCreatedAt(), publicProjectDto.getCreatedAt(),
+                                "Project creation times should match");
+                assertNotNull(publicProjectDto.getOwner(), "Owner should not be null");
+                assertEquals(ownerMemberInPublic.getId(), publicProjectDto.getOwner().getUserId(),
+                                "Owner user ID should match");
+                assertTrue(publicProjectDto.isMember(), "Project member flag should be true");
+                assertFalse(publicProjectDto.isHasPendingRequest(), "Pending request flag should be false");
+                assertEquals(ProjectMember.Role.OWNER, publicProjectDto.getProjectRole(),
+                                "Project role should be OWNER");
 
-// @Test
-// void createNewProject_UserNotFound() {
-// Long loggedInUserId = 1L;
-// AcceptProjectDto dto = new AcceptProjectDto("New Project", "Description",
-// true, 10);
+                verify(projectRepo, times(1)).findAllByConfigIsPublicTrue(any(Pageable.class));
 
-// when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
-// when(projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId,
-// ProjectMember.Role.OWNER))
-// .thenReturn(0L);
+                // Case when non-member is logged in
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPrivate.getId());
+                Page<PublicProjectDto> result2 = projectService.getPublicProjects(1, 5, "title", "asc");
+                PublicProjectDto publicProjectDto2 = result2.getContent().get(0);
+                assertFalse(publicProjectDto2.isMember(), "Member flag should be false");
+                assertFalse(publicProjectDto2.isHasPendingRequest(), "Pending request flag should be false");
 
-// assertThrows(AuthenticationRuntimeException.class, () -> {
-// projectService.createNewProject(dto);
-// });
-// }
+                // Case when has a pending ProjectInteraction
+                when(userService.getLoggedInUserId()).thenReturn(pendingUserInPublic.getId());
+                Page<PublicProjectDto> result3 = projectService.getPublicProjects(1, 5, "title", "asc");
+                PublicProjectDto publicProjectDto3 = result3.getContent().get(0);
+                assertFalse(publicProjectDto3.isMember(), "Member flag should be false");
+                assertTrue(publicProjectDto3.isHasPendingRequest(), "Pending request flag should be true");
+        }
 
-// @Test
-// void updateExistingProject_Success() {
-// // Arrange
-// Long loggedInUserId = 1L;
-// Long projectId = 1L;
+        @Test
+        void getProjectMembers_NonMember_ThrowsException() {
+                Long loggedInUserId = ownerMemberInPublic.getId();
+                Long privateProjectId = privateProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                assertThrows(ForbiddenException.class,
+                                () -> projectService.getProjectMembers(privateProjectId, 1, 10, "asc"));
+                verify(projectMemberRepo, times(1)).existsByUserIdAndProjectId(ownerMemberInPublic.getId(),
+                                privateProjectId);
+        }
 
-// AcceptProjectDto dto = new AcceptProjectDto("Updated Title", "Updated
-// Description", true, 15);
+        @Test
+        void getProjectMembers_NoResults_ReturnsEmptyPage() {
+                Long loggedInUserId = ownerMemberInPublic.getId();
+                Long projectId = publicProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(projectMemberRepo.countAllByProjectId(projectId)).thenReturn(0L);
 
-// Project existingProject = Project.builder()
-// .title("Old Title")
-// .description("Old Desc")
-// .build();
-// existingProject.setId(projectId);
+                Page<ProjectMemberInfoDto> result = projectService.getProjectMembers(projectId, 0, 10, "asc");
 
-// ProjectConfiguration existingConfig = ProjectConfiguration.builder()
-// .isPublic(false)
-// .maxParticipants(10)
-// .build();
-// existingProject.setConfig(existingConfig);
+                assertNotNull(result, "Result should not be null");
+                assertTrue(result.isEmpty(), "Result should be empty");
+                verify(projectMemberRepo, times(1)).countAllByProjectId(projectId);
+                verify(projectMemberRepo, times(0)).findByProjectId(eq(projectId), any(Pageable.class));
+        }
 
-// User user = User.builder()
-// .id(loggedInUserId)
-// .firstName("Solovjovs")
-// .lastName("Deniss")
-// .email("solo@test.com")
-// .build();
+        @Test
+        void getProjectMembers_ValidRequest_ReturnsProjectMembers() {
+                Long loggedInUserId = ownerUserInPublic.getId();
+                Long projectId = publicProject.getId();
 
-// ProjectMember owner = ProjectMember.builder()
-// .user(user)
-// .project(existingProject)
-// .projectRole(ProjectMember.Role.OWNER)
-// .build();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(projectMemberRepo.countAllByProjectId(projectId)).thenReturn(1L);
+                when(projectMemberRepo.findByProjectId(eq(projectId), any(Pageable.class)))
+                                .thenReturn(new PageImpl<>(Collections.singletonList(ownerMemberInPublic)));
 
-// when(projectRepo.findById(projectId)).thenReturn(Optional.of(existingProject));
-// when(projectMemberRepo.findByProjectIdAndProjectRole(projectId,
-// ProjectMember.Role.OWNER))
-// .thenReturn(Arrays.asList(owner));
-// when(projectRepo.save(any(Project.class))).thenReturn(existingProject);
-// when(projectRepo.existsById(projectId)).thenReturn(true);
-// when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                Page<ProjectMemberInfoDto> result = projectService.getProjectMembers(projectId, 1, 10, "asc");
 
-// BasicNestedResponseDto<ProjectDto> response =
-// projectService.updateExistingProject(projectId, dto);
+                assertFalse(result.isEmpty(), "Result should not be empty");
+                assertEquals(1L, result.getTotalElements(), "Total elements should be 1");
+                assertEquals(1, result.getContent().size(), "Content size should be 1");
+                ProjectMemberInfoDto dto = result.getContent().get(0);
 
-// assertThat(response).isNotNull();
-// assertThat(response.getMessage()).isEqualTo("Existing project has been
-// succefully updated");
-// assertThat(response.getData().getProjectInfo().getTitle()).isEqualTo(dto.getTitle());
-// assertThat(response.getData().getProjectInfo().getDescription()).isEqualTo(dto.getDescription());
-// assertThat(response.getData().getConfig().getIsPublic()).isEqualTo(dto.getIsPublic());
-// assertThat(response.getData().getConfig().getMaxParticipants()).isEqualTo(dto.getMaxParticipants());
+                assertEquals(ownerMemberInPublic.getUser().getId(), dto.getUserId(), "User ID should match");
+                assertEquals(ownerMemberInPublic.getUser().getEmail(), dto.getEmail(), "Email should match");
+                assertEquals(ownerMemberInPublic.getUser().getFirstName(), dto.getFirstName(),
+                                "First name should match");
+                assertEquals(ownerMemberInPublic.getUser().getLastName(), dto.getLastName(), "Last name should match");
+                assertEquals(ownerMemberInPublic.getProjectRole(), dto.getProjectRole(), "Project role should match");
+                assertEquals(ownerMemberInPublic.getJoinDate(), dto.getJoinDate(), "Join date should match");
 
-// verify(projectRepo, times(1)).save(existingProject);
-// }
+                verify(projectMemberRepo, times(1)).findByProjectId(eq(projectId), any(Pageable.class));
+        }
 
-// }
+        @Test
+        void createNewProject_MaxLimitExceeded_ThrowsException() {
+                Long loggedInUserId = ownerUserInPublic.getId();
+                AcceptProjectDto dto = new AcceptProjectDto("New Project", "Description of the project", true, 10);
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId, ProjectMember.Role.OWNER))
+                                .thenReturn(10L);
+
+                assertThrows(MaxProjectOwnerLimitExceededException.class, () -> projectService.createNewProject(dto));
+
+                verify(projectRepo, times(0)).save(any(Project.class));
+                verify(configRepo, times(0)).save(any(ProjectConfiguration.class));
+                verify(projectMemberRepo, times(0)).save(any(ProjectMember.class));
+        }
+
+        @Test
+        void createNewProject_Success_ReturnsDto() {
+                Long loggedInUserId = ownerUserInPublic.getId();
+                String title = "New Project";
+                String description = "This is a new description";
+                Boolean isPublic = true;
+                Integer maxParticipants = 10;
+
+                AcceptProjectDto dto = AcceptProjectDto.builder()
+                                .title(title)
+                                .description(description)
+                                .isPublic(isPublic)
+                                .maxParticipants(maxParticipants).build();
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId, ProjectMember.Role.OWNER))
+                                .thenReturn(0L);
+
+                Project newProject = Project.builder().id(1L).title(title).description(description).build();
+                ProjectConfiguration config = ProjectConfiguration.builder().id(1L).isPublic(isPublic)
+                                .maxParticipants(maxParticipants).build();
+                ProjectMember owner = ProjectMember.builder().user(ownerUserInPublic).project(newProject)
+                                .projectRole(ProjectMember.Role.OWNER).build();
+
+                when(projectRepo.save(any(Project.class))).thenReturn(newProject);
+                when(configRepo.save(any(ProjectConfiguration.class))).thenReturn(config);
+                when(projectMemberRepo.save(any(ProjectMember.class))).thenReturn(owner);
+
+                BasicNestedResponseDto<ProjectDto> result = projectService.createNewProject(dto);
+
+                assertNotNull(result, "Result should not be null");
+                assertEquals("New project has been successfully created", result.getMessage(), "Message should match");
+                assertNotNull(result.getData(), "Data should not be null");
+                assertEquals(1L, result.getData().getProjectInfo().getId(), "Project id should match");
+                assertEquals(title, result.getData().getProjectInfo().getTitle(), "Project title should match");
+                assertEquals(description, result.getData().getProjectInfo().getDescription(),
+                                "Project description should match");
+                assertEquals(isPublic, result.getData().getConfig().getIsPublic(), "isPublic should be true");
+                assertEquals(loggedInUserId, result.getData().getProjectInfo().getOwner().getUserId(),
+                                "UserId should match");
+                assertEquals(maxParticipants, result.getData().getConfig().getMaxParticipants(),
+                                "maxParticipants should match.");
+
+                verify(projectRepo, times(1)).save(any(Project.class));
+                verify(configRepo, times(1)).save(any(ProjectConfiguration.class));
+                verify(projectMemberRepo, times(1)).save(any(ProjectMember.class));
+        }
+
+        @Test
+        void updateExistingProject_NotOwnerTryingToUpdate_ThrowsForbiddenException() {
+                Long projectId = 100L; // Not the owner ID
+                AcceptProjectDto dto = new AcceptProjectDto("Updated Title", "Updated Description", true, 10);
+
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.updateExistingProject(projectId, dto));
+                assertEquals("You are not the owner and cannot perform this action.", e.getMessage());
+                verify(projectRepo, times(0)).save(any());
+        }
+
+        @Test
+        void updateExistingProject_MissingConfig_ThrowsEntityNotFoundException() {
+                Long projectId = publicProject.getId();
+                AcceptProjectDto dto = new AcceptProjectDto("Updated Title", "Updated Description", true, 10);
+
+                Project existingProject = Project.builder()
+                                .id(projectId)
+                                .title("Updated Title")
+                                .description("Updated Description")
+                                .config(null)
+                                .build();
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
+                when(projectRepo.findById(projectId)).thenReturn(Optional.of(existingProject));
+                assertThrows(EntityNotFoundException.class, () -> projectService.updateExistingProject(projectId, dto));
+                verify(projectRepo, times(0)).save(any());
+        }
+
+        @Test
+        void updateExistingProject_Success_ReturnsUpdatedProjectDto() {
+                Long projectId = 1L;
+
+                String oldTitle = "Old Title";
+                String oldDescription = "Old Description";
+                Boolean oldIsPublic = true;
+                Integer oldMaxParticipants = 6;
+
+                AcceptProjectDto dto = new AcceptProjectDto("Updated Title", "Updated Description", false, 10);
+
+                Project existingProject = Project.builder()
+                                .id(projectId)
+                                .title(oldTitle)
+                                .description(oldDescription)
+                                .build();
+
+                existingProject.setConfig(
+                                ProjectConfiguration.builder().id(1L).isPublic(oldIsPublic)
+                                                .maxParticipants(oldMaxParticipants).build());
+
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
+                when(projectRepo.findById(projectId)).thenReturn(Optional.of(existingProject));
+                when(projectRepo.save(existingProject)).thenReturn(existingProject);
+
+                BasicNestedResponseDto<ProjectDto> result = projectService.updateExistingProject(projectId, dto);
+
+                assertNotNull(result);
+                assertEquals("Existing project has been succefully updated", result.getMessage());
+                assertEquals("Updated Title", result.getData().getProjectInfo().getTitle());
+                assertEquals("Updated Description", result.getData().getProjectInfo().getDescription());
+                assertFalse(result.getData().getConfig().getIsPublic());
+                assertEquals(10, result.getData().getConfig().getMaxParticipants());
+
+                verify(projectRepo, times(1)).save(existingProject);
+        }
+
+        @Test
+        void deleteProject_Valid() {
+                Long projectId = 1L;
+
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
+                when(projectMemberRepo.findUsersByProjectId(projectId))
+                                .thenReturn(Collections.singletonList(ownerUserInPublic));
+                doNothing().when(projectRepo).deleteById(projectId);
+                when(notificationRepo.save(any(Notification.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                BasicMessageDto result = projectService.deleteProject(projectId);
+
+                assertNotNull(result);
+                assertEquals("Project has been succesfully deleted", result.getMessage());
+
+                verify(projectRepo, times(1)).deleteById(projectId);
+                verify(notificationRepo, times(1)).save(any(Notification.class));
+        }
+
+        @Test
+        void getUserInvitations_NoAssociatedProject_ThrowsException() {
+                Long userId = ownerUserInPublic.getId();
+                ProjectInteraction interaction = createInteraction(ownerUserInPublic, null);
+
+                when(userService.getLoggedInUserId()).thenReturn(userId);
+                when(interactionRepo.findAllByUserIdAndTypeAndStatus(userId, ProjectInteraction.Type.INVITATION,
+                                ProjectInteraction.Status.PENDING))
+                                .thenReturn(List.of(interaction));
+
+                EntityNotFoundException e = assertThrows(EntityNotFoundException.class,
+                                () -> projectService.getUserInvitations());
+                assertEquals("Project associated with the project interaction is missing.", e.getMessage());
+                verify(interactionRepo, times(1)).findAllByUserIdAndTypeAndStatus(userId,
+                                ProjectInteraction.Type.INVITATION, ProjectInteraction.Status.PENDING);
+        }
+
+        @Test
+        void getUserInvitations_Valid_ReturnsDto() {
+                Long userId = ownerUserInPublic.getId();
+                ProjectInteraction interaction = createInteraction(ownerUserInPublic, publicProject);
+
+                when(userService.getLoggedInUserId()).thenReturn(userId);
+                when(interactionRepo.findAllByUserIdAndTypeAndStatus(userId, ProjectInteraction.Type.INVITATION,
+                                ProjectInteraction.Status.PENDING))
+                                .thenReturn(List.of(interaction));
+
+                List<ProjectInteractionDto> result = projectService.getUserInvitations();
+
+                assertNotNull(result, "Result list should not be null");
+                assertEquals(1, result.size());
+
+                ProjectInteractionDto dto = result.get(0);
+                assertEquals(1L, dto.getId());
+                assertEquals(interaction.getInitAt(), dto.getInitAt());
+                assertEquals(interaction.getProject().getId(), dto.getProject().getId());
+                assertEquals(interaction.getProject().getTitle(), dto.getProject().getTitle());
+
+                verify(interactionRepo, times(1)).findAllByUserIdAndTypeAndStatus(userId,
+                                ProjectInteraction.Type.INVITATION, ProjectInteraction.Status.PENDING);
+        }
+
+        @Test
+        void getProjectInvitations_NotOwner_ThrowsException() {
+                Long loggedInUserId = 1000L;
+                Long projectId = publicProject.getId();
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(projectMemberRepo.existsByUserIdAndProjectIdAndProjectRole(loggedInUserId, projectId,
+                                ProjectMember.Role.OWNER)).thenReturn(false);
+
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.getProjectInvitations(projectId));
+
+                assertEquals("You are not the owner and cannot perform this action.", e.getMessage());
+                verify(interactionRepo, times(0)).findAllByProjectIdAndTypeAndStatus(projectId,
+                                ProjectInteraction.Type.INVITATION, ProjectInteraction.Status.PENDING);
+        }
+
+        @Test
+        void getProjectInvitations_InteractionAssociatedUserIsNull_ThrowsException() {
+                Long loggedInUserId = ownerUserInPublic.getId();
+                Long projectId = publicProject.getId();
+
+                ProjectInteraction interaction = createInteraction(null, publicProject);
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(projectMemberRepo.existsByUserIdAndProjectIdAndProjectRole(loggedInUserId, projectId,
+                                ProjectMember.Role.OWNER)).thenReturn(true);
+                when(interactionRepo.findAllByProjectIdAndTypeAndStatus(projectId, ProjectInteraction.Type.INVITATION,
+                                ProjectInteraction.Status.PENDING)).thenReturn(Collections.singletonList(interaction));
+
+                EntityNotFoundException e = assertThrows(EntityNotFoundException.class,
+                                () -> projectService.getProjectInvitations(projectId));
+
+                assertEquals("User associated with the project interaction is missing.", e.getMessage());
+                verify(userService, times(1)).getLoggedInUserId();
+                verify(projectMemberRepo, times(1)).existsByUserIdAndProjectIdAndProjectRole(loggedInUserId, projectId,
+                                ProjectMember.Role.OWNER);
+                verify(interactionRepo, times(1)).findAllByProjectIdAndTypeAndStatus(projectId,
+                                ProjectInteraction.Type.INVITATION,
+                                ProjectInteraction.Status.PENDING);
+
+        }
+
+        @Test
+        void getProjectInvitations_Valid_ReturnsDto() {
+                Long loggedInUserId = ownerUserInPublic.getId();
+                Long projectId = publicProject.getId();
+
+                ProjectInteraction interaction = createInteraction(ownerUserInPrivate, privateProject);
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(projectMemberRepo.existsByUserIdAndProjectIdAndProjectRole(loggedInUserId, projectId,
+                                ProjectMember.Role.OWNER)).thenReturn(true);
+                when(interactionRepo.findAllByProjectIdAndTypeAndStatus(projectId, ProjectInteraction.Type.INVITATION,
+                                ProjectInteraction.Status.PENDING)).thenReturn(Collections.singletonList(interaction));
+
+                List<UserInteractionDto> result = projectService.getProjectInvitations(projectId);
+
+                assertNotNull(result, "Result list should not be null");
+                assertEquals(1, result.size());
+
+                UserInteractionDto dto = result.get(0);
+                assertEquals(1L, dto.getId());
+                assertEquals(interaction.getInitAt(), dto.getInitAt());
+                assertEquals(interaction.getUser().getId(), dto.getUser().getId());
+                assertEquals(interaction.getUser().getEmail(), dto.getUser().getEmail());
+                assertEquals(interaction.getUser().getFirstName(), dto.getUser().getFirstName());
+                assertEquals(interaction.getUser().getLastName(), dto.getUser().getLastName());
+
+                verify(userService, times(1)).getLoggedInUserId();
+                verify(projectMemberRepo, times(1)).existsByUserIdAndProjectIdAndProjectRole(loggedInUserId, projectId,
+                                ProjectMember.Role.OWNER);
+                verify(interactionRepo, times(1)).findAllByProjectIdAndTypeAndStatus(projectId,
+                                ProjectInteraction.Type.INVITATION,
+                                ProjectInteraction.Status.PENDING);
+        }
+
+        private ProjectInteraction createInteraction(User user, Project project) {
+                return ProjectInteraction.builder()
+                                .id(1L)
+                                .user(user)
+                                .project(project)
+                                .type(ProjectInteraction.Type.INVITATION)
+                                .status(ProjectInteraction.Status.PENDING)
+                                .build();
+        }
+
+}

@@ -11,5 +11,4 @@ public class UserInteractionDto {
     private Long id;
     private UserShortDto user;
     private LocalDateTime initAt;
-    private String comment;
 }
