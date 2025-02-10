@@ -15,6 +15,7 @@ public class PublicProjectDto {
     private String title;
     private String description;
     private LocalDateTime createdAt;
+    private LocalDateTime memberSince;
     private OwnerShortDto owner;
     private boolean member;
     private boolean hasPendingRequest;

@@ -633,6 +633,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .createdAt(project.getCreatedAt())
                 .owner(ownerToShortDto(owner))
                 .member(projectMember == null ? false : true)
+                .memberSince(projectMember == null ? null : projectMember.getJoinDate())
                 .hasPendingRequest(hasPendingRequest)
                 .projectRole(projectMember != null ? projectMember.getProjectRole() : null)
                 .build();
@@ -681,10 +682,12 @@ public class ProjectServiceImpl implements ProjectService {
 
         ProjectShortDto projectShortInfo = ProjectShortDto.builder().id(project.getId()).title(project.getTitle())
                 .build();
+        OwnerShortDto ownerShortInfo = ownerToShortDto(getProjectOwner(project.getId()));
 
         return ProjectInteractionDto.builder()
                 .id(interaction.getId())
                 .project(projectShortInfo)
+                .owner(ownerShortInfo)
                 .initAt(interaction.getInitAt())
                 .build();
     }

@@ -11,7 +11,7 @@ import lombok.*;
 public class AcceptProjectDto {
 
     @NotBlank(message = "Title cannot be empty")
-    @Size(max = 100, message = "Title cannot exceed 100 characters")
+    @Size(min = 5, max = 100, message = "Title cannot exceed 100 characters or be less than 5 characters")
     private String title;
 
     @Size(max = 500, message = "Description cannot exceed 500 characters")

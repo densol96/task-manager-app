@@ -14,6 +14,9 @@ const Heading = styled.h1`
   ${(props) =>
     props.as === "h4" && headingStyles(3, 600) + "text-align: center"}
 
+${(props) => props.as === "h5" && headingStyles(2, 700) + "text-align: left"}
+
+
   ${(props) => props.spacing && `letter-spacing: ${props.spacing}px`}
 `;
 

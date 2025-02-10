@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAll } from "../services/apiProjects";
+import { getMyProjects } from "../services/apiProjects";
 import toast from "react-hot-toast";
 
-function usePublicProjects({ page, size, sortDirection, sortBy, logout }) {
+function useMyProjects({ page, size, sortDirection, sortBy, logout }) {
   const { data, isLoading, isSuccess, isError, error } = useQuery({
-    queryKey: ["projects", "public", page, page, sortDirection, sortBy, size],
-    queryFn: () => getAll(page, size, sortDirection, sortBy),
+    queryKey: ["projects", "owned", page, page, sortDirection, sortBy, size],
+    queryFn: () => getMyProjects(page, size, sortDirection, sortBy),
     retry: 1,
   });
 
@@ -27,4 +27,4 @@ function usePublicProjects({ page, size, sortDirection, sortBy, logout }) {
   };
 }
 
-export default usePublicProjects;
+export default useMyProjects;

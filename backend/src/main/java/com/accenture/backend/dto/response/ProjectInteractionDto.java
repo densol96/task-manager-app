@@ -11,6 +11,7 @@ import lombok.*;
 public class ProjectInteractionDto {
     private Long id;
     private ProjectShortDto project;
+    private OwnerShortDto owner;
     private LocalDateTime initAt;
     private String comment;
 }

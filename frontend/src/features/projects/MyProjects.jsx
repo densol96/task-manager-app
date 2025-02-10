@@ -1,14 +1,14 @@
 import React from "react";
-
 import { TbMoodEmptyFilled } from "react-icons/tb";
 import { formatDate } from "../../helpers/functions";
 import Button from "../../ui/Button";
 import { Modal } from "../../ui/Modal";
+
 import ConfirmForm from "./ConfirmForm";
 import { useQueryClient } from "@tanstack/react-query";
 import { StyledEmptyMessage } from "../../ui/StyledEmptyMessage";
 import { StyledTable } from "../../ui/StyledTable";
-import { applyToJoin } from "../services/apiProjects";
+import { leaveProject } from "../services/apiProjects";
 import CreateProjectButton from "./CreateProjectButton";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
@@ -20,7 +20,7 @@ const Th = styled.th`
   align-items: center;
 `;
 
-export const PublicProjects = ({ data, pagination }) => {
+export const MyProjects = ({ data, pagination }) => {
   const queryClient = useQueryClient();
 
   const projects = data || [];
@@ -64,25 +64,19 @@ export const PublicProjects = ({ data, pagination }) => {
                 <Link to={`/projects/${project.id}`}>
                   <Button size="small">Open</Button>
                 </Link>
-                {!(project.member || project.hasPendingRequest) && (
-                  <Modal
-                    triggerElement={
-                      <Button size="small" variation="secondary">
-                        Apply
-                      </Button>
-                    }
+                <Modal
+                  triggerElement={
+                    <Button size="small" variation="danger">
+                      Leave
+                    </Button>
+                  }
+                >
+                  <ConfirmForm
+                    action={async () => leaveProject(project.id, queryClient)}
                   >
-                    <ConfirmForm
-                      action={(e) => {
-                        applyToJoin(project.id, queryClient);
-                      }}
-                    >
-                      Are you sure you want to send the application to join this
-                      project?
-                    </ConfirmForm>
-                  </Modal>
-                )}
-                {project.hasPendingRequest && <p>Pending...</p>}
+                    Are you sure you want to leave this project?
+                  </ConfirmForm>
+                </Modal>
               </Th>
             </tr>
           );

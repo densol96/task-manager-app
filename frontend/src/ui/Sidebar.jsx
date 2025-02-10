@@ -5,6 +5,7 @@ import Heading from "./Heading";
 import { MdSpaceDashboard } from "react-icons/md";
 import { IoDocumentsSharp, IoDocumentLock } from "react-icons/io5";
 import Footer from "./Footer";
+import { FaArrowsTurnToDots } from "react-icons/fa6";
 
 const StyledSidebar = styled.aside`
   padding: 3.2rem 2.4rem;
@@ -84,6 +85,10 @@ function Sidebar() {
         <NavItem to="/projects-mine">
           <IoDocumentLock />
           My Projects
+        </NavItem>
+        <NavItem to="/interactions">
+          <FaArrowsTurnToDots />
+          Interactions
         </NavItem>
       </StyledNav>
       <Footer />

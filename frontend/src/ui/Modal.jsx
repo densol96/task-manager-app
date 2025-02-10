@@ -21,6 +21,7 @@ const Overlay = styled.div`
 `;
 
 const Window = styled.div`
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   position: absolute;
   top: 50%;
   left: 50%;

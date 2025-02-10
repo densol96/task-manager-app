@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import styled, { keyframes } from "styled-components";
 
 const rotate = keyframes`
@@ -7,13 +8,15 @@ const rotate = keyframes`
 `;
 
 const Container = styled.div`
-  position: fixed;
-  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   background-color: #e0e7ff;
+  margin-top: 10%;
 `;
 
 const StyledSpinner = styled.div`
@@ -26,6 +29,7 @@ const StyledSpinner = styled.div`
     conic-gradient(#0000 30%, #4f46e5);
   -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 10px), #000 0);
   animation: ${rotate} 1.5s infinite linear;
+  z-index: 1000;
 `;
 
 function Spinner() {

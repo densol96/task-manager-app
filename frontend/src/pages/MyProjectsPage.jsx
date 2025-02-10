@@ -1,13 +1,24 @@
+import { useState } from "react";
 import usePublicProjects from "../features/projects/usePublicProjects";
 import { useAuthContext } from "../context/AuthContext";
 import Heading from "../ui/Heading";
-import { PublicProjects } from "../features/projects/PublicProjects";
+import { MyProjects } from "../features/projects/MyProjects";
 import Pagination from "../ui/Pagination";
 import { useSearchParams } from "react-router-dom";
 import SortingFiltration from "../features/projects/SortingFiltration";
 import { TableContainer } from "../ui/TableContainer";
+import useMyProjects from "../features/projects/useMyProjects";
+import styled from "styled-components";
+import CreateProjectButton from "../features/projects/CreateProjectButton";
+import { HiddenPlaceholder } from "../ui/HiddenPlaceholder";
 
-function AllProjects() {
+const HeadingWrapper = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+function MyProjectsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const getParamOrDefault = (param, defaultValue) => {
@@ -20,8 +31,9 @@ function AllProjects() {
   const sortBy = getParamOrDefault("sortBy", "createdAt");
 
   const { logout } = useAuthContext();
+
   const { projects, pageNumber, totalPages, isLoading, isSuccess, isError } =
-    usePublicProjects({
+    useMyProjects({
       page,
       size,
       sortDirection,
@@ -31,11 +43,15 @@ function AllProjects() {
 
   return (
     <>
-      <Heading spacing={2} as="h1">
-        All Projects
-      </Heading>
       <TableContainer>
-        <PublicProjects
+        <HeadingWrapper>
+          <Heading spacing={2} as="h1">
+            My Projects
+          </Heading>
+          <CreateProjectButton size="medium" />
+        </HeadingWrapper>
+        <HiddenPlaceholder />
+        <MyProjects
           pagination={<Pagination pagesTotal={totalPages} />}
           data={projects}
         />
@@ -45,4 +61,4 @@ function AllProjects() {
   );
 }
 
-export default AllProjects;
+export default MyProjectsPage;
