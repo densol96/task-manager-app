@@ -1,28 +1,35 @@
 package com.accenture.backend.service.serviceimpl;
 
+import com.accenture.backend.service.CodeSendingService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import java.util.Random;
 
 @Slf4j
 @Service
-@AllArgsConstructor
-public class EmailVerificationServiceImpl{
+@RequiredArgsConstructor
+public class CodeSendingServiceImpl implements CodeSendingService {
+
+    @Value("${application.name}")
+    private String company;
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
-    public void sendEmail(String toEmail){
-        String code = generateCode();
-        String processHtml = processHtml(code);
+    public void sendEmail(String toEmail, String code){
+
+        Context context = new Context();
+        context.setVariable("approvalCode", code);
+        context.setVariable("companyName", company);
+        String html = templateEngine.process("templateHtml", context);
 
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "utf-8");
@@ -30,10 +37,9 @@ public class EmailVerificationServiceImpl{
         try {
             log.info("sending verification code for email: {}", toEmail);
 
-            helper.setText(processHtml, true);
+            helper.setText(html, true);
             helper.setTo(toEmail);
             helper.setSubject("Welcome to Our Service!");
-            helper.setFrom("noreply@yourdomain.com");
             mailSender.send(mimeMessage);
 
             log.info("verification email was successfully sent to email {}:", toEmail);
@@ -41,16 +47,4 @@ public class EmailVerificationServiceImpl{
             log.error("Exception occurred while sending verification email to {}. Exception details: {}", toEmail, e.getMessage());
         }
     }
-
-    private String processHtml(String code){
-        String[] codeArray = code.split("");
-        Context context = new Context();
-        context.setVariable("code", codeArray);
-        return templateEngine.process("templateHtml", context);
-    }
-
-    private static String generateCode(){
-        return String.valueOf(new Random().nextInt(900000) + 100000);
-    }
-
 }
