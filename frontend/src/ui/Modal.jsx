@@ -35,9 +35,9 @@ const Window = styled.div`
   border-radius: 20px;
 
   opacity: 0;
-  animation: fadeIn 700ms ease-in-out forwards;
+  animation: fadeInFromBottom 700ms ease-in-out forwards;
 
-  @keyframes fadeIn {
+  @keyframes fadeInFromBottom {
     from {
       opacity: 0;
       transform: translate(-50%, -40%);

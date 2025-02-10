@@ -15,13 +15,14 @@ export const formatDate = (dateString) => {
 };
 
 export const errorParser = (e, logout) => {
-  console.log("ERROR_PARSER:", e);
   if (e.code === "ERR_NETWORK") {
     toast.error("Service is currently unavailable! Please, try again later!");
     console.log("ERR_NETWORK problem, server is likely down...");
     return;
   }
+
   if (e?.response?.message?.includes("JWT expired")) {
+    console.log("I RUN!");
     toast.error("Session expired... You will need to log in again.");
     logout?.();
     return;

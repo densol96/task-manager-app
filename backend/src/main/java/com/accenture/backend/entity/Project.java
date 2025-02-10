@@ -39,6 +39,10 @@ public class Project {
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    private List<ProjectInteraction> interactions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Task> tasks = new ArrayList<>();
 
     @PrePersist

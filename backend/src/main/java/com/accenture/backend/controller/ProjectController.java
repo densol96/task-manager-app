@@ -42,7 +42,12 @@ public class ProjectController {
             @RequestParam(defaultValue = "5") Integer size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDirection) {
-        return new ResponseEntity<>(projectService.getPublicProjects(page, size, sortBy, sortDirection), HttpStatus.OK);
+        System.out.println(page);
+        System.out.println(sortDirection);
+        System.out.println(size);
+        System.out.println(sortBy);
+        return new ResponseEntity<>(projectService.getPublicProjects(page, size,
+                sortBy, sortDirection), HttpStatus.OK);
     }
 
     @GetMapping("/owned")

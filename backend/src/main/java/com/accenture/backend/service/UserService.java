@@ -14,4 +14,6 @@ public interface UserService extends UserDetailsService {
      Long getLoggedInUserId();
 
      UserRoleDto getIdentity();
+
+     boolean hasRole(String role);
 }

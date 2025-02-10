@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import Button from "./Button";
 import { useAuthContext } from "../context/AuthContext";
+import NotificationsAlarm from "../features/notifications/NotificationsAlarm";
 
 const StyledHeader = styled.header`
   padding: 1.2rem 4.8rem;
@@ -18,6 +19,7 @@ function Header() {
   return (
     <StyledHeader>
       <p>{user.email}</p>
+      <NotificationsAlarm />
       <Button onClick={logout} size="small">
         Logout
       </Button>

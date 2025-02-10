@@ -4,7 +4,7 @@ export const StyledTable = styled.table`
   font-size: 1.4rem;
   border-collapse: collapse;
   width: 100%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
   td,
   th {
@@ -40,5 +40,12 @@ export const StyledTable = styled.table`
     tr:hover {
       transform: scale(1.1);
     }
+  }
+
+  td p {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
   }
 `;

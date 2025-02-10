@@ -3,6 +3,7 @@ import { HiChevronRight, HiChevronLeft } from "react-icons/hi2";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { FaRegCircle, FaCircle } from "react-icons/fa6";
+import { useEffect } from "react";
 
 const StyledPagination = styled.div`
   width: 100%;

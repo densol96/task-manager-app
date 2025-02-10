@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import javax.security.sasl.AuthenticationException;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -87,5 +88,17 @@ public class UserServiceImpl implements UserService {
         Long loggedInUserId = getLoggedInUserId();
         User user = userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException());
         return userMapper.userToLoginDto(user);
+    }
+
+    @Override
+    public boolean hasRole(String role) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals(role));
     }
 }

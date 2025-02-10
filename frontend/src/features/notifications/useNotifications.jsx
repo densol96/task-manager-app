@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { getMyProjects } from "../services/apiProjects";
 import toast from "react-hot-toast";
+import { getAllNotificationsByUser } from "../services/apiNotifications";
 
-function useMyProjects({ page, size, sortDirection, sortBy, logout }) {
+function useNotifications({ logout, filterBy, page = 1, size = 1 }) {
   const { data, isLoading, isSuccess, isError, error } = useQuery({
-    queryKey: ["projects", "owned", page, page, sortDirection, sortBy, size],
-    queryFn: () => getMyProjects(page, size, sortDirection, sortBy),
+    queryKey: ["notifications", filterBy, page, size],
+    queryFn: () => getAllNotificationsByUser(filterBy, page, size),
     retry: 1,
   });
 
@@ -14,17 +15,13 @@ function useMyProjects({ page, size, sortDirection, sortBy, logout }) {
     logout();
   }
 
-  const projects = data?.content;
-  const pageNumber = data?.pageable?.pageNumber;
-  const totalPages = data?.totalPages;
   return {
-    projects,
-    pageNumber,
-    totalPages,
+    notifications: data?.content,
     isLoading,
     isSuccess,
     isError,
+    totalPages: data?.totalPages,
   };
 }
 
-export default useMyProjects;
+export default useNotifications;
