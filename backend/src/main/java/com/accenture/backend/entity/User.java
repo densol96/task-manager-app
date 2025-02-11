@@ -1,13 +1,14 @@
 package com.accenture.backend.entity;
 
+import com.accenture.backend.enums.MessagePrivacy;
+import com.accenture.backend.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
-import com.accenture.backend.enums.Role;
-
 import java.sql.Timestamp;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Builder
 @NoArgsConstructor
@@ -37,4 +38,8 @@ public class User {
     protected void onCreate() {
         createdAt = new Timestamp(System.currentTimeMillis());
     }
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private MessagePrivacy messagePrivacy = MessagePrivacy.ANYONE;
 }

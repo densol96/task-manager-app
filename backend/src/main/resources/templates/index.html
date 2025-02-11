@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Chat Example</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<h2>WebSocket Chat</h2>
+<div>
+    <input type="text" id="username" placeholder="Enter your name" />
+    <input type="number" id="userId" placeholder="Your ID" />
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+</div>
+<div id="chat"></div>
+<input type="number" id="receiverId" placeholder="Receiver ID" />
+<input type="text" id="message" placeholder="Enter message" />
+<button onclick="sendMessage()">Send</button>
+
+<script>
+    var stompClient = null;
+
+    function connect() {
+        var socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function (frame) {
+            console.log('Connected: ' + frame);
+            var userId = document.getElementById("userId").value;
+            stompClient.subscribe('/user/' + userId + '/queue/messages', function (messageOutput) {
+                showMessage(JSON.parse(messageOutput.body));
+            });
+        });
+    }
+
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+        console.log("Disconnected");
+    }
+
+    function sendMessage() {
+        var senderId = document.getElementById("userId").value;
+        var receiverId = document.getElementById("receiverId").value;
+        var content = document.getElementById("message").value;
+        var chatMessage = {
+            senderId: parseInt(senderId),
+            receiverId: parseInt(receiverId),
+            content: content
+        };
+        stompClient.send("/app/sendMessage", {}, JSON.stringify(chatMessage));
+    }
+
+    function showMessage(message) {
+        var chatDiv = document.getElementById("chat");
+        var messageElement = document.createElement("p");
+        messageElement.appendChild(document.createTextNode("From " + message.senderId + ": " + message.content));
+        chatDiv.appendChild(messageElement);
+    }
+</script>
+</body>
+</html>
