@@ -4,9 +4,9 @@ import com.accenture.backend.enums.MessagePrivacy;
 import com.accenture.backend.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.sql.Timestamp;
 
+@Data
 @Getter
 @Setter
 @Entity
