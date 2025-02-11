@@ -38,15 +38,16 @@ const ActiveAlarm = styled.div`
 function NotificationsAlarm() {
   const [hasUnread, setHasUnread] = useState(false);
 
-  useEffect(() => {
-    const checkNotifications = async () => {
-      const result = await userHasUnreadNotifications();
-      setHasUnread(result);
-    };
-    checkNotifications();
-    const interval = setInterval(checkNotifications, 10000); // 10s
+  const checkNotifications = async () => {
+    const result = await userHasUnreadNotifications();
+    setHasUnread(result);
+  };
 
-    return () => clearInterval(interval);
+  useEffect(() => {
+    checkNotifications();
+    // const interval = setInterval(checkNotifications, 10000); // 10s
+
+    // return () => clearInterval(interval);
   }, []);
 
   return (
@@ -63,7 +64,7 @@ function NotificationsAlarm() {
         </IconWrapper>
       }
     >
-      <Notifications />
+      <Notifications checkHasUnread={checkNotifications} />
     </Modal>
   );
 }

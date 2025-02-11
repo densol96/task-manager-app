@@ -37,7 +37,6 @@ export const PublicProjects = ({ data, pagination }) => {
   }
 
   const columns = Object.keys(data[0]);
-
   return (
     <StyledTable hasFooter={pagination !== null}>
       <thead>

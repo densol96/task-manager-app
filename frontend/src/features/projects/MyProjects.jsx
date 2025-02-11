@@ -12,6 +12,7 @@ import { leaveProject } from "../services/apiProjects";
 import CreateProjectButton from "./CreateProjectButton";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
+import { useAuthContext } from "../../context/AuthContext";
 
 const Th = styled.th`
   display: flex;
@@ -21,7 +22,7 @@ const Th = styled.th`
 `;
 
 export const MyProjects = ({ data, pagination }) => {
-  const queryClient = useQueryClient();
+  const { user } = useAuthContext();
 
   const projects = data || [];
   if (projects?.length === 0) {
@@ -56,7 +57,11 @@ export const MyProjects = ({ data, pagination }) => {
               <th>{project.title}</th>
               <th>{project.description}</th>
               <th>{formatDate(project.createdAt)}</th>
-              <th>
+              <th
+                className={
+                  user.id === project.owner.userId ? "red-highlight" : ""
+                }
+              >
                 <p>{`${project.owner.firstName} ${project.owner.lastName} `}</p>
                 <p>{`(${project.owner.email})`}</p>
               </th>
@@ -64,19 +69,6 @@ export const MyProjects = ({ data, pagination }) => {
                 <Link to={`/projects/${project.id}`}>
                   <Button size="small">Open</Button>
                 </Link>
-                <Modal
-                  triggerElement={
-                    <Button size="small" variation="danger">
-                      Leave
-                    </Button>
-                  }
-                >
-                  <ConfirmForm
-                    action={async () => leaveProject(project.id, queryClient)}
-                  >
-                    Are you sure you want to leave this project?
-                  </ConfirmForm>
-                </Modal>
               </Th>
             </tr>
           );

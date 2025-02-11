@@ -2,6 +2,7 @@ import { TbMoodEmptyFilled } from "react-icons/tb";
 import { useAuthContext } from "../../context/AuthContext";
 import { StyledEmptyMessage } from "../../ui/StyledEmptyMessage";
 import { StyledTable } from "../../ui/StyledTable";
+import { HeaderLine } from "../../ui/HeaderLine";
 import CreateProjectButton from "../projects/CreateProjectButton";
 import useNotifications from "./useNotifications";
 import { formatDate } from "../../helpers/functions";
@@ -10,11 +11,19 @@ import Heading from "../../ui/Heading";
 import styled from "styled-components";
 import { useEffect, useState } from "react";
 import { MdDelete } from "react-icons/md";
-import { FaMarker } from "react-icons/fa6";
+import { FaCircle, FaMarker, FaRegCircle } from "react-icons/fa6";
 import { IoMdCheckmarkCircle } from "react-icons/io";
 import { HiChevronLeft, HiChevronRight } from "react-icons/hi2";
 import { useQueryClient } from "@tanstack/react-query";
 import { deleteNotification, markAsRead } from "../services/apiNotifications";
+import { SelectUnit } from "../../ui/SelectUnit";
+
+const PageTracker = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: center;
+`;
 
 const Pagination = styled.div`
   width: 100%;
@@ -26,22 +35,6 @@ const Pagination = styled.div`
   gap: 3rem;
   border: 1px solid var(--color-brand-900);
   border-radius: 6px;
-`;
-
-const HeaderLine = styled.header`
-  margin-bottom: 2rem;
-  display: flex;
-  justify-content: space-between;
-`;
-
-const SelectUnit = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-
-  label {
-    font-size: 2rem;
-  }
 `;
 
 const Buttons = styled.div`
@@ -70,7 +63,7 @@ const Container = styled.div`
   width: 70rem;
 `;
 
-function Notifications() {
+function Notifications({ checkHasUnread }) {
   const { logout } = useAuthContext();
   const [page, setPage] = useState(1);
   const [filterBy, setFilterBy] = useState("all");
@@ -83,8 +76,12 @@ function Notifications() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (totalPages < page) setPage(totalPages);
-  }, [totalPages, page]);
+    if (page < 1 || isError) {
+      setPage(1);
+    } else if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   return (
     <Container>
@@ -116,7 +113,7 @@ function Notifications() {
           </p>
         </StyledEmptyMessage>
       ) : (
-        <StyledTable hasFooter={true}>
+        <StyledTable>
           <thead>
             <tr>
               <th>Title</th>
@@ -138,9 +135,10 @@ function Notifications() {
                       {!notification.hasBeenRead ? (
                         <Button
                           size="medium"
-                          onClick={() =>
-                            markAsRead(notification.id, queryClient)
-                          }
+                          onClick={async () => {
+                            await markAsRead(notification.id, queryClient);
+                            checkHasUnread();
+                          }}
                         >
                           <FaMarker />
                         </Button>
@@ -154,9 +152,13 @@ function Notifications() {
                       <Button
                         variation="danger"
                         size="medium"
-                        onClick={() =>
-                          deleteNotification(notification.id, queryClient)
-                        }
+                        onClick={async () => {
+                          await deleteNotification(
+                            notification.id,
+                            queryClient
+                          );
+                          checkHasUnread();
+                        }}
                       >
                         <MdDelete />
                       </Button>
@@ -174,6 +176,14 @@ function Notifications() {
                     <p>
                       Currently on {page}. of {totalPages}
                     </p>
+                    <PageTracker>
+                      {Array.from(
+                        { length: totalPages },
+                        (_, index) => index + 1
+                      ).map((pageNum) =>
+                        !(pageNum === page) ? <FaRegCircle /> : <FaCircle />
+                      )}
+                    </PageTracker>
                     <Buttons>
                       <PaginationButton
                         onClick={() => setPage((page) => page - 1)}

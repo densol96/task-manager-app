@@ -12,9 +12,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     Long countAllByUserId(Long userId);
 
-    Long countAllByUserIdAndHasBeenReadIsFalse(Long userId);
+    Long countAllByUserIdAndHasBeenRead(Long userId, Boolean hasBeenRead);
 
-    Boolean existsByUserIdAndHasBeenReadIsFalse(Long userId);
+    Boolean existsByUserIdAndHasBeenRead(Long userId, Boolean hasBeenRead);
 
     Page<Notification> findAllByUserId(Long userId, Pageable pageable);
 

@@ -22,6 +22,14 @@ export async function getMyProjects(page, size, sortDirection, sortBy) {
   return response.data;
 }
 
+export async function getProjectMembers({ projectId, page, sortDirection }) {
+  const API_ENDPOINT = `${API_URL}/projects/${projectId}/members?page=${page}&sortDirection=${sortDirection}`;
+  const response = await axios.get(API_ENDPOINT, {
+    headers: { Authorization: `Bearer ${getJWT()}` },
+  });
+  return response.data;
+}
+
 export async function createProject(formData, queryClient) {
   const API_ENDPOINT = `${API_URL}/projects`;
   const response = await axios.post(API_ENDPOINT, formData, {
@@ -29,6 +37,25 @@ export async function createProject(formData, queryClient) {
   });
   toast.success(response?.data?.message || "Project created");
   queryClient.invalidateQueries({ queryKey: ["projects"] });
+}
+
+export async function updateProject(projectId, formData, queryClient) {
+  const API_ENDPOINT = `${API_URL}/projects/${projectId}`;
+  const response = await axios.put(API_ENDPOINT, formData, {
+    headers: { Authorization: `Bearer ${getJWT()}` },
+  });
+  toast.success(response?.data?.message || "Project updated");
+  queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+  queryClient.invalidateQueries({ queryKey: ["project", "config", projectId] });
+}
+
+export async function deleteProject(projectId, queryClient) {
+  const API_ENDPOINT = `${API_URL}/projects/${projectId}`;
+  const response = await axios.delete(API_ENDPOINT, {
+    headers: { Authorization: `Bearer ${getJWT()}` },
+  });
+  toast.success(response?.data?.message || "Project updated");
+  queryClient.invalidateQueries({ queryKey: ["project", projectId] });
 }
 
 export async function applyToJoin(projectId, queryClient) {
@@ -49,10 +76,19 @@ export async function leaveProject(projectId, queryClient) {
   });
   toast.success(response?.data?.message || "Successfully left the project");
   queryClient.invalidateQueries({ queryKey: ["projects"] });
+  queryClient.invalidateQueries({ queryKey: ["project"] });
 }
 
 export async function getUserInteractions(type) {
   const API_ENDPOINT = `${API_URL}/projects/${type}`;
+  const response = await axios.get(API_ENDPOINT, {
+    headers: { Authorization: `Bearer ${getJWT()}` },
+  });
+  return response.data;
+}
+
+export async function getProjectInteractions(projectId, type) {
+  const API_ENDPOINT = `${API_URL}/projects/${projectId}/${type}`;
   const response = await axios.get(API_ENDPOINT, {
     headers: { Authorization: `Bearer ${getJWT()}` },
   });
@@ -92,7 +128,14 @@ export async function cancelApplication(applicationId, queryClient) {
 
 export async function getProjectInfo(projectId) {
   const API_ENDPOINT = `${API_URL}/projects/${projectId}`;
-  console.log(API_ENDPOINT);
+  const response = await axios.get(API_ENDPOINT, {
+    headers: { Authorization: `Bearer ${getJWT()}` },
+  });
+  return response.data;
+}
+
+export async function getOwnerPrivateInfo(projectId) {
+  const API_ENDPOINT = `${API_URL}/projects/${projectId}/for-owner`;
   const response = await axios.get(API_ENDPOINT, {
     headers: { Authorization: `Bearer ${getJWT()}` },
   });
@@ -121,7 +164,7 @@ export async function cancelInvitation(invitationId, queryClient) {
     headers: { Authorization: `Bearer ${getJWT()}` },
   });
   toast.success("Invitation cancelled");
-  queryClient.invalidateQueries({ queryKey: ["projectInvitations"] });
+  queryClient.invalidateQueries({ queryKey: ["project", "interactions"] });
 }
 
 // ===== Applications =====
@@ -134,7 +177,7 @@ export async function acceptApplication(applicationId, queryClient) {
     { headers: { Authorization: `Bearer ${getJWT()}` } }
   );
   toast.success("Application accepted");
-  queryClient.invalidateQueries({ queryKey: ["projectApplications"] });
+  queryClient.invalidateQueries({ queryKey: ["project", "interactions"] });
 }
 
 export async function declineApplication(applicationId, queryClient) {
@@ -145,7 +188,7 @@ export async function declineApplication(applicationId, queryClient) {
     { headers: { Authorization: `Bearer ${getJWT()}` } }
   );
   toast.success("Application declined");
-  queryClient.invalidateQueries({ queryKey: ["projectApplications"] });
+  queryClient.invalidateQueries({ queryKey: ["project", "interactions"] });
 }
 
 export async function deleteApplication(applicationId, queryClient) {
@@ -165,5 +208,5 @@ export async function kickMember(projectMemberId, queryClient) {
     headers: { Authorization: `Bearer ${getJWT()}` },
   });
   toast.success("Member removed");
-  queryClient.invalidateQueries({ queryKey: ["projectMembers"] });
+  queryClient.invalidateQueries({ queryKey: ["project", "members"] });
 }

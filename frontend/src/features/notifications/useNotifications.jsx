@@ -3,7 +3,7 @@ import { getMyProjects } from "../services/apiProjects";
 import toast from "react-hot-toast";
 import { getAllNotificationsByUser } from "../services/apiNotifications";
 
-function useNotifications({ logout, filterBy, page = 1, size = 1 }) {
+function useNotifications({ logout, filterBy, page = 1, size = 5 }) {
   const { data, isLoading, isSuccess, isError, error } = useQuery({
     queryKey: ["notifications", filterBy, page, size],
     queryFn: () => getAllNotificationsByUser(filterBy, page, size),
@@ -14,6 +14,8 @@ function useNotifications({ logout, filterBy, page = 1, size = 1 }) {
     toast.error("Session expired... You will need to log in again.");
     logout();
   }
+
+  console.log(data);
 
   return {
     notifications: data?.content,

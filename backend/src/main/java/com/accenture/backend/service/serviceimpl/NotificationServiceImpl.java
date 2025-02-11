@@ -8,7 +8,6 @@ import com.accenture.backend.entity.User;
 import com.accenture.backend.exception.custom.EntityNotFoundException;
 import com.accenture.backend.exception.custom.ForbiddenException;
 import com.accenture.backend.exception.custom.InvalidInputException;
-import com.accenture.backend.exception.custom.PageOutOfRangeException;
 import com.accenture.backend.repository.NotificationRepository;
 import com.accenture.backend.service.NotificationService;
 import com.accenture.backend.service.UserService;
@@ -56,17 +55,17 @@ public class NotificationServiceImpl implements NotificationService {
         Long totalCount = notificationRepository.countAllByUserId(loggedInUserId);
         if (totalCount == 0)
             return Page.empty();
-        Pageable pageable = getNotificationsPageable(page, size, totalCount);
+        Pageable pageable = getNotificationsPageable(page, size);
         return notificationRepository.findAllByUserId(loggedInUserId, pageable).map(this::notificationToDto);
     }
 
     @Override
     public Page<NotificationShortDto> getUserUnreadNotifications(Integer page, Integer size) {
         Long loggedInUserId = userService.getLoggedInUserId();
-        Long totalCount = notificationRepository.countAllByUserIdAndHasBeenReadIsFalse(loggedInUserId);
+        Long totalCount = notificationRepository.countAllByUserIdAndHasBeenRead(loggedInUserId, false);
         if (totalCount == 0)
             return Page.empty();
-        Pageable pageable = getNotificationsPageable(page, size, totalCount);
+        Pageable pageable = getNotificationsPageable(page, size);
         return notificationRepository.findAllByUserIdAndHasBeenRead(loggedInUserId, false, pageable)
                 .map(this::notificationToDto);
     }
@@ -74,10 +73,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public Page<NotificationShortDto> getUserReadNotifications(Integer page, Integer size) {
         Long loggedInUserId = userService.getLoggedInUserId();
-        Long totalCount = notificationRepository.countAllByUserIdAndHasBeenReadIsFalse(loggedInUserId);
+        Long totalCount = notificationRepository.countAllByUserIdAndHasBeenRead(loggedInUserId, true);
         if (totalCount == 0)
             return Page.empty();
-        Pageable pageable = getNotificationsPageable(page, size, totalCount);
+        Pageable pageable = getNotificationsPageable(page, size);
         return notificationRepository.findAllByUserIdAndHasBeenRead(loggedInUserId, true, pageable)
                 .map(this::notificationToDto);
     }
@@ -92,7 +91,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public HasUnreadDto userHasUnreadNotifications() {
         return new HasUnreadDto(
-                notificationRepository.existsByUserIdAndHasBeenReadIsFalse(userService.getLoggedInUserId()));
+                notificationRepository.existsByUserIdAndHasBeenRead(userService.getLoggedInUserId(), false));
     }
 
     @Override
@@ -101,10 +100,7 @@ public class NotificationServiceImpl implements NotificationService {
         return new BasicMessageDto("Notification with the id of " + notificationId + " has been succefully deleted.");
     }
 
-    private Pageable getNotificationsPageable(Integer page, Integer size, Long resultsTotal) {
-        // long totalPages = (long) Math.ceil((double) resultsTotal / size);
-        // if (page != null && page > totalPages)
-        // throw new PageOutOfRangeException(page, totalPages);
+    private Pageable getNotificationsPageable(Integer page, Integer size) {
         if (page != null && page < 1)
             throw new InvalidInputException("page", page);
         if (size < 1)

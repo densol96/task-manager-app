@@ -14,7 +14,6 @@ function useProject({ projectId, logout }) {
     queryFn: () => getProjectInfo(projectId),
     retry: 1,
   });
-
   if (error?.response?.data?.message?.includes("JWT expired")) {
     toast.error("Session expired... You will need to log in again.");
     logout();
@@ -25,6 +24,7 @@ function useProject({ projectId, logout }) {
     isLoading,
     isSuccess,
     isError,
+    error,
   };
 }
 

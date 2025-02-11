@@ -11,6 +11,8 @@ public interface ProjectService {
 
     PublicProjectDto getProjectInfo(Long projectId);
 
+    ProjectConfigDto getOwnerProjectInfo(Long projectId);
+
     Page<PublicProjectDto> getPublicProjects(Integer page, Integer size, String sortBy, String sortDirection);
 
     Page<PublicProjectDto> getUserProjects(Integer page, Integer size, String sortBy, String sortDirection);

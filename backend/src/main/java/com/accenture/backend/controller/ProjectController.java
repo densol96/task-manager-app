@@ -21,6 +21,7 @@ import com.accenture.backend.dto.response.UserInteractionDto;
 import com.accenture.backend.dto.response.ProjectMemberInfoDto;
 import com.accenture.backend.dto.response.BasicMessageDto;
 import com.accenture.backend.dto.response.BasicNestedResponseDto;
+import com.accenture.backend.dto.response.ProjectConfigDto;
 import com.accenture.backend.dto.response.ProjectInteractionDto;
 import com.accenture.backend.dto.response.PublicProjectDto;
 import com.accenture.backend.dto.response.ProjectDto;
@@ -42,10 +43,6 @@ public class ProjectController {
             @RequestParam(defaultValue = "5") Integer size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDirection) {
-        System.out.println(page);
-        System.out.println(sortDirection);
-        System.out.println(size);
-        System.out.println(sortBy);
         return new ResponseEntity<>(projectService.getPublicProjects(page, size,
                 sortBy, sortDirection), HttpStatus.OK);
     }
@@ -99,6 +96,11 @@ public class ProjectController {
     @GetMapping("/{projectId}")
     public ResponseEntity<PublicProjectDto> getProjectInfo(@PathVariable Long projectId) {
         return new ResponseEntity<>(projectService.getProjectInfo(projectId), HttpStatus.OK);
+    }
+
+    @GetMapping("/{projectId}/for-owner")
+    public ResponseEntity<ProjectConfigDto> getPrivateProjectInfo(@PathVariable Long projectId) {
+        return new ResponseEntity<>(projectService.getOwnerProjectInfo(projectId), HttpStatus.OK);
     }
 
     // ========== Invitation Endpoints ==========

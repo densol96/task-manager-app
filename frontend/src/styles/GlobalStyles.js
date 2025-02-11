@@ -195,6 +195,11 @@ img {
 
   /* For dark mode */
   filter: grayscale(var(--image-grayscale)) opacity(var(--image-opacity));
-}`;
+}
+
+.red-highlight {
+  color: var(--color-red-800) !important;
+}
+`;
 
 export default GlobalStyles;

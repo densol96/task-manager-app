@@ -18,6 +18,11 @@ import MyProjectsPage from "./pages/MyProjectsPage";
 import Invitations from "./pages/Invitations";
 import Applications from "./pages/Applications";
 import Project from "./pages/Project";
+import Tasks from "./features/projects/Tasks";
+import Members from "./features/projects/Members";
+import OwnerPanel from "./features/projects/OwnerPanel";
+import ProjectInvitations from "./features/projects/ProjectInvitations";
+import ProjectApplications from "./features/projects/ProjectApplications";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,7 +52,25 @@ function App() {
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="projects-all" element={<AllProjects />} />
                 <Route path="projects-mine" element={<MyProjectsPage />} />
-                <Route path="projects/:id" element={<Project />} />
+                <Route path="projects/:id" element={<Project />}>
+                  <Route index element={<Navigate replace to="tasks" />} />
+                  <Route path="tasks" element={<Tasks />} />
+                  <Route path="members" element={<Members />} />
+                  <Route path="owner-panel" element={<OwnerPanel />}>
+                    <Route
+                      index
+                      element={<Navigate replace to="invitations" />}
+                    />
+                    <Route
+                      path="invitations"
+                      element={<ProjectInvitations />}
+                    />
+                    <Route
+                      path="applications"
+                      element={<ProjectApplications />}
+                    />
+                  </Route>
+                </Route>
                 <Route path="interactions">
                   <Route
                     index

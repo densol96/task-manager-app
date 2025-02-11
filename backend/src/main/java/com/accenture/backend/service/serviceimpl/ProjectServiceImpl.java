@@ -9,6 +9,7 @@ import com.accenture.backend.dto.response.BasicMessageDto;
 import com.accenture.backend.dto.response.BasicNestedResponseDto;
 import com.accenture.backend.dto.response.ConfigDto;
 import com.accenture.backend.dto.response.OwnerShortDto;
+import com.accenture.backend.dto.response.ProjectConfigDto;
 import com.accenture.backend.dto.response.ProjectDto;
 import com.accenture.backend.dto.response.ProjectInteractionDto;
 import com.accenture.backend.dto.response.ProjectShortDto;
@@ -32,7 +33,6 @@ import com.accenture.backend.exception.custom.InvalidInputException;
 import com.accenture.backend.exception.custom.InvalidInteractionException;
 import com.accenture.backend.exception.custom.MaxParticipantsReachedException;
 import com.accenture.backend.exception.custom.MaxProjectOwnerLimitExceededException;
-import com.accenture.backend.exception.custom.PageOutOfRangeException;
 import com.accenture.backend.exception.custom.UserAlreadyMemberException;
 import com.accenture.backend.repository.NotificationRepository;
 import com.accenture.backend.repository.ProjectConfigurationRepository;
@@ -79,8 +79,25 @@ public class ProjectServiceImpl implements ProjectService {
 
         if (config.getIsPublic() == false && !projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
             throw new ForbiddenException("You cannot see the private project's information unless you are a member.");
-
         return projectToPublicProjectDto(project, null);
+    }
+
+    @Override
+    public ProjectConfigDto getOwnerProjectInfo(Long projectId) {
+        validateThatLoggedInUserIsOwner(projectId);
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new EntityNotFoundException("Project", projectId));
+        ProjectConfiguration config = project.getConfig();
+        if (config == null)
+            throw new EntityNotFoundException(
+                    "Configuraion associated with project with the id of " + projectId + " is missing.");
+
+        return ProjectConfigDto.builder()
+                .configId(config.getId())
+                .projectId(projectId)
+                .maxParticipants(config.getMaxParticipants())
+                .isPublic(config.getIsPublic())
+                .build();
     }
 
     @Override
@@ -91,7 +108,9 @@ public class ProjectServiceImpl implements ProjectService {
 
         Pageable pageable = validatePageableInput(page, size, resultsTotal, parseProjectSortBy(sortBy).fieldName(),
                 sortDirection);
+        System.out.println(pageable);
         Page<Project> projects = projectRepo.findAllByConfigIsPublicTrue(pageable);
+        System.out.println(projects.getSize());
         return projects.map(project -> projectToPublicProjectDto(project, null));
     }
 
@@ -112,7 +131,10 @@ public class ProjectServiceImpl implements ProjectService {
     public Page<ProjectMemberInfoDto> getProjectMembers(Long projectId, Integer page, Integer size,
             String sortDirection) {
         Long loggedInUserId = userService.getLoggedInUserId();
-        if (!projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new EntityNotFoundException("Project", projectId));
+        if (project.getConfig().getIsPublic() == false
+                && !projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
             throw new ForbiddenException("Only members of the project can perform this action");
 
         Long resultsTotal = projectMemberRepo.countAllByProjectId(projectId);
@@ -591,11 +613,6 @@ public class ProjectServiceImpl implements ProjectService {
             throw new InvalidInputException("page", page);
         if (size < 1)
             throw new InvalidInputException("size", size);
-
-        long totalPages = (long) Math.ceil((double) resultsTotal / size);
-
-        if (page != null && page > totalPages)
-            throw new PageOutOfRangeException(page, totalPages);
 
         Sort sort = sortDirection.toLowerCase().equals("desc") ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();

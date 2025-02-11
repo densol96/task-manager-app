@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import usePublicProjects from "../features/projects/usePublicProjects";
 import { useAuthContext } from "../context/AuthContext";
 import Heading from "../ui/Heading";
@@ -11,6 +11,7 @@ import useMyProjects from "../features/projects/useMyProjects";
 import styled from "styled-components";
 import CreateProjectButton from "../features/projects/CreateProjectButton";
 import { HiddenPlaceholder } from "../ui/HiddenPlaceholder";
+import { useQueryClient } from "@tanstack/react-query";
 
 const HeadingWrapper = styled.div`
   display: flex;
@@ -40,6 +41,16 @@ function MyProjectsPage() {
       sortBy,
       logout,
     });
+
+  useEffect(() => {
+    if (page < 1 || isError) {
+      searchParams.set("page", 1 + "");
+      setSearchParams(searchParams);
+    } else if (page > totalPages) {
+      searchParams.set("page", totalPages + "");
+      setSearchParams(searchParams);
+    }
+  }, [page, totalPages, isError]);
 
   return (
     <>
