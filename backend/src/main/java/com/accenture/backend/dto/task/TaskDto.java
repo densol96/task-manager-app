@@ -1,6 +1,5 @@
 package com.accenture.backend.dto.task;
 
-import com.accenture.backend.entity.Project;
 import com.accenture.backend.entity.Task;
 import com.accenture.backend.enums.TaskPriority;
 import com.accenture.backend.enums.TaskStatus;
@@ -34,15 +33,5 @@ public class TaskDto {
                 task.getDeadline(),
                 task.getProject().getId()
         );
-    }
-
-    public Task toEntity() {
-        Task task = new Task();
-        task.setTitle(this.title);
-        task.setDescription(this.description);
-        task.setStatus(this.status);
-        task.setPriority(this.priority);
-        task.setDeadline(this.deadline);
-        return task;
     }
 }

@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class TaskDiscussionMessageDto {
     private Long id;
     private Long taskId;
-    private Long authorId; // actual entity is fetched in service layer
+    private Long authorId;
     private String message;
     private LocalDateTime postedAt;
 

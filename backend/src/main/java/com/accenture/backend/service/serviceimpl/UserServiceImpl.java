@@ -104,4 +104,12 @@ public class UserServiceImpl implements UserService {
             throw new BadCredentialsException("Bad credentials");
         }
     }
+
+    @Override
+    public Long getLoggedInUserId() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findUserByEmail(email)
+                .map(User::getId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+    }
 }

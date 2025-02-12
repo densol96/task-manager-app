@@ -10,4 +10,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
     List<ProjectMember> findByProjectIdAndProjectRole(Long projectId, ProjectMember.ProjectRole role);
 
     Long countAllByUserId(Long userId);
+
+    Optional<ProjectMember> findByUserIdAndProjectId(Long userId, Long projectId);
+    boolean existsByUserIdAndProjectId(Long userId, Long projectId);
 }

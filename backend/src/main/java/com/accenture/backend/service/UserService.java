@@ -14,4 +14,6 @@ public interface UserService extends UserDetailsService {
      void changeRole(String email, Role role);
 
      void changePassword(ChangePasswordDto changePasswordDto);
+
+     Long getLoggedInUserId();
 }
