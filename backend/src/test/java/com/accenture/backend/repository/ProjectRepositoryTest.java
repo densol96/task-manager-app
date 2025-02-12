@@ -60,7 +60,7 @@ class ProjectRepositoryTest {
 
     @Test
     void testFindById_NotExists() {
-        Optional<Project> projectOptional = projectRepository.findById(999L);
+        Optional<Project> projectOptional = projectRepository.findById(24L);
         assertFalse(projectOptional.isPresent(), "Project should not be found");
     }
 

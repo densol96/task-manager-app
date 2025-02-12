@@ -2,7 +2,7 @@ package com.accenture.backend.controller;
 
 import com.accenture.backend.entity.Notification;
 import com.accenture.backend.entity.User;
-import com.accenture.backend.service.serviceimpl.NotificationService;
+import com.accenture.backend.service.serviceimpl.NotificationServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -14,26 +14,26 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationController {
 
-    private final NotificationService notificationService;
+    private final NotificationServiceImpl notificationServiceImpl;
 
     @GetMapping("/user/{userId}")
     public List<Notification> getNotificationsByUser(@PathVariable User user) {
-        return notificationService.getNotificationsByUser(user);
+        return notificationServiceImpl.getNotificationsByUser(user);
     }
 
     @GetMapping("/user/{userId}/unread")
     public List<Notification> getUnreadNotificationsByUser(@PathVariable User user) {
-        return notificationService.getUnreadNotificationsByUser(user);
+        return notificationServiceImpl.getUnreadNotificationsByUser(user);
     }
 
     @PostMapping
     public Notification createNotification(@RequestParam User user, @RequestParam String title,
             @RequestParam String message) {
-        return notificationService.createNotification(user, title, message);
+        return notificationServiceImpl.createNotification(user, title, message);
     }
 
     @PutMapping("/{notificationId}/mark-as-read")
     public Notification markAsRead(@PathVariable Integer notificationId) {
-        return notificationService.markAsRead(notificationId);
+        return notificationServiceImpl.markAsRead(notificationId);
     }
 }
