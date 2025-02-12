@@ -50,16 +50,16 @@ public class DataInitializerConfig {
                         configRepo.saveAll(Arrays.asList(config1, config2, config3, config4));
 
                         ProjectMember member1 = ProjectMember.builder().project(project1)
-                                        .projectRole(ProjectMember.ProjectRole.OWNER).build();
+                                        .projectRole(ProjectMember.Role.OWNER).build();
 
                         ProjectMember member2 = ProjectMember.builder().project(project2)
-                                        .projectRole(ProjectMember.ProjectRole.USER).build();
+                                        .projectRole(ProjectMember.Role.USER).build();
 
                         ProjectMember member3 = ProjectMember.builder().project(project3)
-                                        .projectRole(ProjectMember.ProjectRole.OWNER).build();
+                                        .projectRole(ProjectMember.Role.OWNER).build();
 
                         ProjectMember member4 = ProjectMember.builder().project(project4)
-                                        .projectRole(ProjectMember.ProjectRole.USER).build();
+                                        .projectRole(ProjectMember.Role.USER).build();
 
                         memberRepo.saveAll(Arrays.asList(member1, member2, member3, member4));
 

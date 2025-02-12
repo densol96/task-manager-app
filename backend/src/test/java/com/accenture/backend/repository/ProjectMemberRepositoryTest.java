@@ -1,109 +1,156 @@
 package com.accenture.backend.repository;
 
-import com.accenture.backend.entity.Project;
 import com.accenture.backend.entity.ProjectMember;
 import com.accenture.backend.entity.User;
+import com.accenture.backend.entity.Project;
 import com.accenture.backend.enums.Role;
-import org.junit.jupiter.api.AfterEach;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.time.LocalDateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.jdbc.EmbeddedDatabaseConnection;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+
+import java.util.Arrays;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@Testcontainers
-class ProjectMemberRepositoryTest {
+@DataJpaTest
+@AutoConfigureTestDatabase(connection = EmbeddedDatabaseConnection.H2)
+public class ProjectMemberRepositoryTest {
 
-    @Container
-    private static final MySQLContainer<?> mySQLContainer = new MySQLContainer<>("mysql:8.0");
+        @Autowired
+        private ProjectMemberRepository projectMemberRepo;
 
-    @Autowired
-    private ProjectMemberRepository projectMemberRepository;
+        @Autowired
+        private UserRepository userRepo;
 
-    @Autowired
-    private UserRepository userRepository;
+        @Autowired
+        private ProjectRepository projectRepo;
 
-    @Autowired
-    private ProjectRepository projectRepository;
+        private Long userAndOwnerId;
+        private Long ownerId;
+        private Long userAndUserId;
+        private Long hasTwoMembersId;
+        private Long hasThreeMembersId;
 
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry dynamicPropertyRegistry) {
-        dynamicPropertyRegistry.add("spring.datasource.url", mySQLContainer::getJdbcUrl);
-        dynamicPropertyRegistry.add("spring.datasource.username", mySQLContainer::getUsername);
-        dynamicPropertyRegistry.add("spring.datasource.password", mySQLContainer::getPassword);
-    }
+        @BeforeEach
+        void setUp() {
+                User userAndOwner = userRepo.save(User.builder()
+                                .email("john.doe@example.com")
+                                .firstName("John")
+                                .lastName("Doe")
+                                .password("securePass123")
+                                .role(Role.USER)
+                                .build());
+                userAndOwnerId = userAndOwner.getId();
 
-    private Long projectMemberId;
+                User owner = userRepo.save(User.builder()
+                                .email("not.john.doe@example.com")
+                                .firstName("NotJohn")
+                                .lastName("TotallyNotDoe")
+                                .password("securePass123")
+                                .role(Role.USER)
+                                .build());
+                ownerId = owner.getId();
 
-    @BeforeEach
-    void setUp() {
-        User user1 = User.builder()
-                .email("john.doe@example.com")
-                .firstName("John")
-                .lastName("Doe")
-                .password("securePass123")
-                .role(Role.USER)
-                .build();
+                User userAndUser = userRepo.save(User.builder()
+                                .email("test@test.com")
+                                .firstName("Test")
+                                .lastName("Tested")
+                                .password("securePass123")
+                                .role(Role.USER)
+                                .build());
+                userAndUserId = userAndUser.getId();
 
-        User savedUser = userRepository.save(user1);
+                Project hasTwoMembers = projectRepo
+                                .save(Project.builder().title("Test project").description("Test description").build());
+                hasTwoMembersId = hasTwoMembers.getId();
 
-        Project project1 = new Project("Project 1", "Description for Project 1", LocalDateTime.now());
-        Project savedProject1 = projectRepository.save(project1);
+                Project hasThreeMembers = projectRepo
+                                .save(Project.builder().title("Test project 2").description("Test description 2")
+                                                .build());
+                hasThreeMembersId = hasThreeMembers.getId();
 
-        ProjectMember projectMember = new ProjectMember(savedUser, savedProject1, ProjectMember.ProjectRole.USER, LocalDateTime.now());
-        ProjectMember savedProjectMember = projectMemberRepository.save(projectMember);
+                ProjectMember member1 = ProjectMember.builder().user(userAndOwner).project(hasTwoMembers)
+                                .projectRole(ProjectMember.Role.OWNER).build();
+                ProjectMember member2 = ProjectMember.builder().user(userAndOwner).project(hasThreeMembers)
+                                .projectRole(ProjectMember.Role.USER).build();
+                ProjectMember member3 = ProjectMember.builder().user(owner).project(hasThreeMembers)
+                                .projectRole(ProjectMember.Role.OWNER).build();
+                ProjectMember member4 = ProjectMember.builder().user(userAndUser).project(hasTwoMembers)
+                                .projectRole(ProjectMember.Role.USER).build();
+                ProjectMember member5 = ProjectMember.builder().user(userAndUser).project(hasThreeMembers)
+                                .projectRole(ProjectMember.Role.USER).build();
 
-        projectMemberId = savedProjectMember.getId();
-    }
+                projectMemberRepo.saveAll(Arrays.asList(member1, member2, member3, member4, member5));
+        }
 
-    @AfterEach
-    void tearDown() {
-        projectMemberRepository.deleteAll();
-        projectRepository.deleteAll();
-        userRepository.deleteAll();
-    }
+        @Test
+        public void countAllByUserId_ReturnsCorrectCount() {
+                assertThat(projectMemberRepo.countAllByUserId(userAndOwnerId)).isEqualTo(2);
+                assertThat(projectMemberRepo.countAllByUserId(ownerId)).isEqualTo(1);
+                assertThat(projectMemberRepo.countAllByUserId(userAndUserId)).isEqualTo(2);
+                assertThat(projectMemberRepo.countAllByUserId(123L)).isEqualTo(0);
+        }
 
-    @Test
-    void testFindById_Exists() {
-        Optional<ProjectMember> projectMemberOptional = projectMemberRepository.findById(projectMemberId);
-        assertTrue(projectMemberOptional.isPresent());
-    }
+        @Test
+        public void countAllByUserIdAndProjectRole_ReturnsCorrectCount() {
+                assertThat(projectMemberRepo.countAllByUserIdAndProjectRole(ownerId, ProjectMember.Role.OWNER))
+                                .isEqualTo(1);
+                assertThat(projectMemberRepo.countAllByUserIdAndProjectRole(ownerId, ProjectMember.Role.USER))
+                                .isEqualTo(0);
+                assertThat(projectMemberRepo.countAllByUserIdAndProjectRole(userAndOwnerId, ProjectMember.Role.OWNER))
+                                .isEqualTo(1);
+                assertThat(projectMemberRepo.countAllByUserIdAndProjectRole(userAndOwnerId, ProjectMember.Role.USER))
+                                .isEqualTo(1);
+                assertThat(projectMemberRepo.countAllByUserIdAndProjectRole(userAndUserId, ProjectMember.Role.USER))
+                                .isEqualTo(2);
+                assertThat(projectMemberRepo.countAllByUserIdAndProjectRole(userAndUserId, ProjectMember.Role.OWNER))
+                                .isEqualTo(0);
+        }
 
-    @Test
-    void testFindById_NotExists() {
-        Optional<ProjectMember> projectMemberOptional = projectMemberRepository.findById(999L);
-        assertFalse(projectMemberOptional.isPresent());
-    }
+        @Test
+        public void findByProjectIdAndProjectRole_ReturnsCorrectMembers() {
+                assertThat(projectMemberRepo.findByProjectIdAndProjectRole(hasTwoMembersId,
+                                ProjectMember.Role.USER)).hasSize(1);
+                assertThat(projectMemberRepo.findByProjectIdAndProjectRole(hasTwoMembersId,
+                                ProjectMember.Role.OWNER)).hasSize(1);
 
-    @Test
-    void testSaveProjectMember() {
-        User user1 = User.builder()
-                .email("john.doe@example.com")
-                .firstName("John")
-                .lastName("Doe")
-                .password("securePass123")
-                .role(Role.USER)
-                .build();
+                assertThat(projectMemberRepo.findByProjectIdAndProjectRole(hasThreeMembersId,
+                                ProjectMember.Role.USER)).hasSize(2);
+                assertThat(projectMemberRepo.findByProjectIdAndProjectRole(hasThreeMembersId,
+                                ProjectMember.Role.OWNER)).hasSize(1);
+        }
 
-        User savedUser = userRepository.save(user1);
+        @Test
+        public void findByUserIdAndProjectId_ReturnsCorrectMember() {
+                Optional<ProjectMember> foundMember = projectMemberRepo.findByUserIdAndProjectId(userAndOwnerId,
+                                hasTwoMembersId);
 
-        Project project = new Project("New Project", "Description for new project", LocalDateTime.now());
-        projectRepository.save(project);
+                assertThat(foundMember).isPresent();
+                assertThat(foundMember.get().getUser().getId()).isEqualTo(userAndOwnerId);
+                assertThat(foundMember.get().getProject().getId()).isEqualTo(hasTwoMembersId);
 
-        ProjectMember projectMember = new ProjectMember(savedUser, project, ProjectMember.ProjectRole.MANAGER, LocalDateTime.now());
-        ProjectMember savedProjectMember = projectMemberRepository.save(projectMember);
+                assertThat(projectMemberRepo.findByUserIdAndProjectId(userAndUserId,
+                                hasTwoMembersId)).isPresent();
 
-        assertNotNull(savedProjectMember.getId());
-    }
+                assertThat(projectMemberRepo.findByUserIdAndProjectId(ownerId,
+                                hasTwoMembersId)).isEmpty();
+        }
+
+        @Test
+        public void existsByUserIdAndProjectId_ReturnsTrueIfMemberExists() {
+                assertThat(projectMemberRepo.existsByUserIdAndProjectId(userAndOwnerId, hasTwoMembersId)).isTrue();
+                assertThat(projectMemberRepo.existsByUserIdAndProjectId(userAndOwnerId, hasThreeMembersId)).isTrue();
+                assertThat(projectMemberRepo.existsByUserIdAndProjectId(ownerId, hasThreeMembersId)).isTrue();
+        }
+
+        @Test
+        public void existsByUserIdAndProjectId_ReturnsFalseIfMemberDoesNotExist() {
+                assertThat(projectMemberRepo.existsByUserIdAndProjectId(ownerId, hasTwoMembersId)).isFalse();
+        }
 }
-

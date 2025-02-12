@@ -1,74 +1,109 @@
 package com.accenture.backend.repository;
 
 import com.accenture.backend.entity.Project;
-import org.junit.jupiter.api.AfterEach;
+import com.accenture.backend.entity.ProjectConfiguration;
+import com.accenture.backend.entity.ProjectMember;
+import com.accenture.backend.entity.User;
+import com.accenture.backend.enums.Role;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.boot.jdbc.EmbeddedDatabaseConnection;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.*;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-@SpringBootTest
-@Testcontainers
-class ProjectRepositoryTest {
-
-    @Container
-    private static final MySQLContainer<?> mySQLContainer = new MySQLContainer<>("mysql:8.0");
+@DataJpaTest
+@AutoConfigureTestDatabase(connection = EmbeddedDatabaseConnection.H2)
+public class ProjectRepositoryTest {
 
     @Autowired
-    private ProjectRepository projectRepository;
+    private ProjectRepository projectRepo;
 
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry dynamicPropertyRegistry) {
-        dynamicPropertyRegistry.add("spring.datasource.url", mySQLContainer::getJdbcUrl);
-        dynamicPropertyRegistry.add("spring.datasource.username", mySQLContainer::getUsername);
-        dynamicPropertyRegistry.add("spring.datasource.password", mySQLContainer::getPassword);
-    }
+    @Autowired
+    private UserRepository userRepo;
 
-    private Long projectId;
+    @Autowired
+    private ProjectConfigurationRepository configRepo;
+
+    @Autowired
+    private ProjectMemberRepository projectMemberRepo;
+
+    private User user;
 
     @BeforeEach
     void setUp() {
-        Project project1 = new Project("Project 1", "Description for Project 1", LocalDateTime.now());
-        Project savedProject1 = projectRepository.save(project1);
-        projectId = savedProject1.getId();
+        user = userRepo.save(User.builder()
+                .email("john.doe@example.com")
+                .firstName("John")
+                .lastName("Doe")
+                .password("securePass123")
+                .role(Role.USER)
+                .build());
 
-        Project project2 = new Project("Project 2", "Description for Project 2", LocalDateTime.now());
-        projectRepository.save(project2);
-    }
+        Project publicProject = projectRepo.save(Project.builder()
+                .title("Public Project")
+                .description("A public project")
+                .build());
+        configRepo.save(ProjectConfiguration.builder().project(publicProject).isPublic(true).build());
 
-    @AfterEach
-    void tearDown() {
-        projectRepository.deleteAll();
+        Project privateProject = projectRepo.save(Project.builder()
+                .title("Private Project")
+                .description("A private project")
+                .build());
+        configRepo.save(ProjectConfiguration.builder().project(privateProject).isPublic(false).build());
+
+        projectMemberRepo.save(ProjectMember.builder().user(user).project(privateProject).build());
+        projectMemberRepo.save(ProjectMember.builder().user(user).project(publicProject).build());
     }
 
     @Test
-    void testFindById_Exists() {
-        Optional<Project> projectOptional = projectRepository.findById(projectId);
-        assertTrue(projectOptional.isPresent(), "Project should be found");
-        assertEquals("Project 1", projectOptional.get().getTitle(), "Project title should match");
+    public void findAllByConfigIsPublicTrue_ReturnsPagedProjects() {
+        Pageable pageable = PageRequest.of(0, 5, Sort.by("title").ascending());
+
+        Page<Project> result = projectRepo.findAllByConfigIsPublicTrue(pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("Public Project");
     }
 
     @Test
-    void testFindById_NotExists() {
-        Optional<Project> projectOptional = projectRepository.findById(24L);
-        assertFalse(projectOptional.isPresent(), "Project should not be found");
+    public void countAllByConfigIsPublicTrue_ReturnsCorrectCount() {
+        Long count = projectRepo.countAllByConfigIsPublicTrue();
+        assertThat(count).isEqualTo(1);
     }
 
     @Test
-    void testSaveProject() {
-        Project project = new Project("New Project", "New project description", LocalDateTime.now());
-        Project savedProject = projectRepository.save(project);
-        assertNotNull(savedProject.getId(), "Saved project should have a generated ID");
-        assertEquals("New Project", savedProject.getTitle(), "Project title should match");
+    public void findProjectsByUserId_ReturnsPagedProjectsForUser() {
+        Pageable pageable = PageRequest.of(0, 5, Sort.by("title").ascending());
+
+        Page<Project> result = projectRepo.findProjectsByUserId(user.getId(), pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent()).hasSize(2);
+    }
+
+    @Test
+    public void findProjectsByUserId_ReturnsEmptyPageIfNoProjects() {
+        User otherUser = userRepo.save(User.builder()
+                .email("another.user@example.com")
+                .firstName("Another")
+                .lastName("User")
+                .password("securePass123")
+                .role(Role.USER)
+                .build());
+
+        Pageable pageable = PageRequest.of(0, 5, Sort.by("title").ascending());
+        Page<Project> result = projectRepo.findProjectsByUserId(otherUser.getId(), pageable);
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalElements()).isEqualTo(0);
+        assertThat(result.getContent()).isEmpty();
     }
 }

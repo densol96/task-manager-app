@@ -18,4 +18,5 @@ public interface UserMapper {
     User userInfoDtoToUser(UserInfoDto userInfoDto);
 
     UserRoleDto userToLoginDto(User user);
+
 }

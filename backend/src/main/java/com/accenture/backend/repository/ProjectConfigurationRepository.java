@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.accenture.backend.entity.ProjectConfiguration;
 
 public interface ProjectConfigurationRepository extends JpaRepository<ProjectConfiguration, Long> {
-
+    ProjectConfiguration findByProjectId(Long projectId);
 }
