@@ -17,24 +17,28 @@ import com.accenture.backend.dto.response.PublicProjectDto;
 import com.accenture.backend.dto.response.UserInteractionDto;
 import com.accenture.backend.dto.response.ProjectMemberInfoDto;
 import com.accenture.backend.dto.response.UserShortDto;
+
 import com.accenture.backend.service.PremiumAccountService;
 import com.accenture.backend.service.ProjectService;
 import com.accenture.backend.service.UserService;
+
 import com.accenture.backend.entity.Notification;
 import com.accenture.backend.entity.Project;
 import com.accenture.backend.entity.ProjectConfiguration;
 import com.accenture.backend.entity.ProjectInteraction;
 import com.accenture.backend.entity.ProjectMember;
 import com.accenture.backend.entity.User;
-import com.accenture.backend.exception.custom.AlreadyExistsException;
-import com.accenture.backend.exception.custom.AuthenticationRuntimeException;
-import com.accenture.backend.exception.custom.EntityNotFoundException;
-import com.accenture.backend.exception.custom.ForbiddenException;
-import com.accenture.backend.exception.custom.InvalidInputException;
-import com.accenture.backend.exception.custom.InvalidInteractionException;
-import com.accenture.backend.exception.custom.MaxParticipantsReachedException;
-import com.accenture.backend.exception.custom.MaxProjectOwnerLimitExceededException;
-import com.accenture.backend.exception.custom.UserAlreadyMemberException;
+
+import com.accenture.backend.exception.AlreadyExistsException;
+import com.accenture.backend.exception.AuthenticationRuntimeException;
+import com.accenture.backend.exception.EntityNotFoundException;
+import com.accenture.backend.exception.ForbiddenException;
+import com.accenture.backend.exception.InvalidInputException;
+import com.accenture.backend.exception.InvalidInteractionException;
+import com.accenture.backend.exception.MaxParticipantsReachedException;
+import com.accenture.backend.exception.MaxProjectOwnerLimitExceededException;
+import com.accenture.backend.exception.UserAlreadyMemberException;
+
 import com.accenture.backend.repository.NotificationRepository;
 import com.accenture.backend.repository.ProjectConfigurationRepository;
 import com.accenture.backend.repository.ProjectInteractionRepository;

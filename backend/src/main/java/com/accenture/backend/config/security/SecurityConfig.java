@@ -38,16 +38,18 @@ public class SecurityConfig {
                                 }))
                                 .authorizeHttpRequests(authorize -> authorize
                                                 .requestMatchers("/api/v1/login/**", "/api/v1/sign-up/**",
-                                                                "/api/v1/payments/**")
+                                                                "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                                                 .permitAll()
-                                                .requestMatchers("/api/v1/identity/**", "/api/v1/projects/**")
+                                                .requestMatchers("/api/v1/identity/**")
                                                 .authenticated()
-                                                // .requestMatchers().hasRole("NOT_CONFIRMED")
-                                                .requestMatchers("/api/v1/user/email").hasRole("NOT_CONFIRMED")
-                                                .requestMatchers("/api/v1/user/**").hasRole("NOT_CONFIRMED")
-                                                .requestMatchers("/api/v1/tasks/**").hasRole("NOT_CONFIRMED")
-                                                .requestMatchers("/api/v1/notifications/**").hasRole("NOT_CONFIRMED")
-                                                .anyRequest().denyAll())
+                                                .requestMatchers("/api/v1/user/email-request",
+                                                                "/api/v1/user/email-code/**")
+                                                .hasRole("NOT_CONFIRMED")
+                                                .requestMatchers("/api/v1/user/**", "/api/v1/projects/**",
+                                                                "/api/v1/tasks/**", "/api/v1/notifications/**")
+                                                .hasRole("USER")
+                                                .anyRequest()
+                                                .denyAll())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

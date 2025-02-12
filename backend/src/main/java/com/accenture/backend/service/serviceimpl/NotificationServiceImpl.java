@@ -5,9 +5,9 @@ import com.accenture.backend.dto.response.HasUnreadDto;
 import com.accenture.backend.dto.response.NotificationShortDto;
 import com.accenture.backend.entity.Notification;
 import com.accenture.backend.entity.User;
-import com.accenture.backend.exception.custom.EntityNotFoundException;
-import com.accenture.backend.exception.custom.ForbiddenException;
-import com.accenture.backend.exception.custom.InvalidInputException;
+import com.accenture.backend.exception.EntityNotFoundException;
+import com.accenture.backend.exception.ForbiddenException;
+import com.accenture.backend.exception.InvalidInputException;
 import com.accenture.backend.repository.NotificationRepository;
 import com.accenture.backend.service.NotificationService;
 import com.accenture.backend.service.UserService;
@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDateTime;
 
 @Service
@@ -30,7 +31,6 @@ public class NotificationServiceImpl implements NotificationService {
     private final JavaMailSender mailSender;
     private final UserService userService;
 
-    @Override
     public Notification createNotification(User user, String title, String message) {
         Notification notification = new Notification();
         notification.setUser(user);
@@ -126,5 +126,4 @@ public class NotificationServiceImpl implements NotificationService {
                 .createdAt(notification.getCreatedAt())
                 .hasBeenRead(notification.getHasBeenRead()).build();
     }
-
 }

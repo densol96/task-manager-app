@@ -53,10 +53,10 @@ import com.accenture.backend.repository.ProjectRepository;
 import com.accenture.backend.repository.UserRepository;
 
 import com.accenture.backend.service.UserService;
-import com.accenture.backend.exception.custom.EntityNotFoundException;
-import com.accenture.backend.exception.custom.ForbiddenException;
-import com.accenture.backend.exception.custom.InvalidInputException;
-import com.accenture.backend.exception.custom.MaxProjectOwnerLimitExceededException;
+import com.accenture.backend.exception.EntityNotFoundException;
+import com.accenture.backend.exception.ForbiddenException;
+import com.accenture.backend.exception.InvalidInputException;
+import com.accenture.backend.exception.MaxProjectOwnerLimitExceededException;
 
 public class ProjectServiceImplTest {
         @Mock

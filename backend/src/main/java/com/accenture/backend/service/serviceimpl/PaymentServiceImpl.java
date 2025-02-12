@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.accenture.backend.dto.response.CheckoutDto;
-import com.accenture.backend.exception.custom.PremiumAccountAlreadyActiveException;
+import com.accenture.backend.exception.PremiumAccountAlreadyActiveException;
 import com.accenture.backend.service.PaymentService;
 import com.accenture.backend.service.PremiumAccountService;
 import com.accenture.backend.service.UserService;

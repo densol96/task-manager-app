@@ -2,7 +2,7 @@ package com.accenture.backend.controller.advice;
 
 import com.accenture.backend.dto.response.BasicErrorDto;
 import com.accenture.backend.dto.response.ValidationErrorResponseDto;
-import com.accenture.backend.exception.custom.EmailAlreadyInUseException;
+import com.accenture.backend.exception.EmailAlreadyInUseException;
 import com.accenture.backend.util.ErrorMessage;
 
 import java.util.LinkedHashMap;
@@ -11,6 +11,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -47,6 +48,12 @@ public class ControllerExceptionAdvice {
     @ExceptionHandler(EmailAlreadyInUseException.class)
     public ResponseEntity<ErrorMessage> EmailAlreadyInUseHandler() {
         ErrorMessage errorDetails = new ErrorMessage("Email already in use");
+        return ResponseEntity.badRequest().body(errorDetails);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorMessage> BadCredentialsHandler() {
+        ErrorMessage errorDetails = new ErrorMessage("You password is incorrect");
         return ResponseEntity.badRequest().body(errorDetails);
     }
 

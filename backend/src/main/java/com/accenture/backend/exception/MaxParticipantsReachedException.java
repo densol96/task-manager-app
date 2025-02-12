@@ -1,4 +1,4 @@
-package com.accenture.backend.exception.custom;
+package com.accenture.backend.exception;
 
 public class MaxParticipantsReachedException extends RuntimeException {
     public MaxParticipantsReachedException(String message) {

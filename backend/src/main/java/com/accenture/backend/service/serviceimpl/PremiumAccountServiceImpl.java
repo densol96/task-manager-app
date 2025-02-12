@@ -9,12 +9,11 @@ import org.springframework.stereotype.Service;
 
 import com.accenture.backend.entity.PremiumAccount;
 import com.accenture.backend.entity.User;
-import com.accenture.backend.exception.custom.EntityNotFoundException;
-import com.accenture.backend.exception.custom.PremiumAccountAlreadyActiveException;
+import com.accenture.backend.exception.EntityNotFoundException;
+import com.accenture.backend.exception.PremiumAccountAlreadyActiveException;
 import com.accenture.backend.repository.PremiumAccountRepository;
 import com.accenture.backend.repository.UserRepository;
 import com.accenture.backend.service.PremiumAccountService;
-import com.accenture.backend.service.UserService;
 
 import lombok.RequiredArgsConstructor;
 
