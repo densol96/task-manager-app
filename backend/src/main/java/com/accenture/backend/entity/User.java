@@ -1,5 +1,6 @@
 package com.accenture.backend.entity;
 
+import com.accenture.backend.enums.AuthProvider;
 import com.accenture.backend.enums.Role;
 
 import jakarta.persistence.CascadeType;
@@ -45,6 +46,8 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    private AuthProvider authProvider = AuthProvider.LOCAL;
 
     @Column(name = "created_at")
     private Timestamp createdAt;

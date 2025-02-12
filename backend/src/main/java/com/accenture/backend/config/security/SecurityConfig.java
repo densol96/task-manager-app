@@ -1,5 +1,7 @@
 package com.accenture.backend.config.security;
 
+import com.accenture.backend.service.JwtService;
+import com.accenture.backend.service.OAuth2Service;
 import com.accenture.backend.util.JwtAuthenticationFilter;
 import lombok.AllArgsConstructor;
 
@@ -7,10 +9,13 @@ import java.util.Arrays;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -21,6 +26,8 @@ import org.springframework.web.cors.CorsConfiguration;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final OAuth2Service oauth2Service;
+        private final JwtService jwtService;
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -50,6 +57,17 @@ public class SecurityConfig {
                                                 .hasRole("USER")
                                                 .anyRequest()
                                                 .denyAll())
+                                .oauth2Login(oauth2 -> oauth2
+                                                .successHandler((request, response, authentication) -> {
+                                                        OAuth2User oAuth2User = (OAuth2User) authentication
+                                                                        .getPrincipal();
+                                                        UserDetails userDetails = oauth2Service
+                                                                        .findOrCreateUser(oAuth2User);
+                                                        String jwtToken = jwtService.generateToken(userDetails);
+                                                        String redirectUrl = "http://localhost:3000/redirect?token="
+                                                                        + jwtToken;
+                                                        response.sendRedirect(redirectUrl);
+                                                }))
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
