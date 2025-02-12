@@ -1,5 +1,7 @@
 package com.accenture.backend.dto.response;
 
+import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,6 +11,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @Builder
-public class BasicMessageDto {
-    private String message;
+public class PremiumAccountDto {
+    private Boolean hasActivePremiumAccount;
+    private LocalDateTime expiresAt;
 }

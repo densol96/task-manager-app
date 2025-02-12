@@ -17,6 +17,7 @@ import com.accenture.backend.dto.response.PublicProjectDto;
 import com.accenture.backend.dto.response.UserInteractionDto;
 import com.accenture.backend.dto.response.ProjectMemberInfoDto;
 import com.accenture.backend.dto.response.UserShortDto;
+import com.accenture.backend.service.PremiumAccountService;
 import com.accenture.backend.service.ProjectService;
 import com.accenture.backend.service.UserService;
 import com.accenture.backend.entity.Notification;
@@ -66,15 +67,24 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectInteractionRepository interactionRepo;
     private final NotificationRepository notificationRepo;
     private final UserService userService;
+    private final PremiumAccountService premiumAccountService;
 
     @Value("${app.projects.max-amount}")
     private Integer maxProjectAmountAllowed;
+
+    @Value("${app.projects.max-amount-with-premium}")
+    private Integer maxProjectAmountAllowedWithPremium;
 
     @Override
     public PublicProjectDto getProjectInfo(Long projectId) {
         Project project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new InvalidInputException("project ID", projectId));
         ProjectConfiguration config = project.getConfig();
+
+        if (config == null)
+            throw new EntityNotFoundException(
+                    "Configuraion associated with project with the id of " + projectId + " is missing.");
+
         Long loggedInUserId = userService.getLoggedInUserId();
 
         if (config.getIsPublic() == false && !projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
@@ -108,9 +118,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         Pageable pageable = validatePageableInput(page, size, resultsTotal, parseProjectSortBy(sortBy).fieldName(),
                 sortDirection);
-        System.out.println(pageable);
         Page<Project> projects = projectRepo.findAllByConfigIsPublicTrue(pageable);
-        System.out.println(projects.getSize());
         return projects.map(project -> projectToPublicProjectDto(project, null));
     }
 
@@ -152,8 +160,15 @@ public class ProjectServiceImpl implements ProjectService {
     public BasicNestedResponseDto<ProjectDto> createNewProject(AcceptProjectDto dto) {
         Long loggedInUserId = userService.getLoggedInUserId();
 
-        if (projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId,
-                ProjectMember.Role.OWNER) >= maxProjectAmountAllowed)
+        boolean hasPremiumAccount = premiumAccountService.userHasActivePremiumAccount(loggedInUserId);
+        Long amountAccountsOwned = projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId,
+                ProjectMember.Role.OWNER);
+
+        if (hasPremiumAccount && amountAccountsOwned >= maxProjectAmountAllowedWithPremium)
+            throw new MaxProjectOwnerLimitExceededException(
+                    "You have already reached your 10 accounts per premium account limit.");
+
+        if (!hasPremiumAccount && amountAccountsOwned >= maxProjectAmountAllowed)
             throw new MaxProjectOwnerLimitExceededException();
 
         Project newProject = projectRepo

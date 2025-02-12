@@ -1,6 +1,8 @@
 package com.accenture.backend.service.serviceimpl;
 
 import com.accenture.backend.dto.user.UserRoleDto;
+import com.accenture.backend.dto.response.PremiumAccountDto;
+import com.accenture.backend.dto.response.UserContextDto;
 import com.accenture.backend.dto.user.UserInfoDto;
 import com.accenture.backend.entity.User;
 import com.accenture.backend.exception.custom.AuthenticationRuntimeException;
@@ -8,9 +10,12 @@ import com.accenture.backend.exception.custom.EmailAlreadyInUseException;
 import com.accenture.backend.mappper.UserMapper;
 import com.accenture.backend.util.SecurityUser;
 import com.accenture.backend.repository.UserRepository;
+import com.accenture.backend.service.PremiumAccountService;
 import com.accenture.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.time.LocalDateTime;
 
 import javax.security.sasl.AuthenticationException;
 
@@ -30,6 +35,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final PremiumAccountService premiumAccountService;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -84,10 +90,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserRoleDto getIdentity() {
-        Long loggedInUserId = getLoggedInUserId();
-        User user = userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException());
-        return userMapper.userToLoginDto(user);
+    public UserContextDto getIdentity() {
+        User user = validateLoggedInUser();
+
+        boolean hasPremium = premiumAccountService.userHasActivePremiumAccount(user.getId());
+        LocalDateTime expiresAt = hasPremium == false ? null : user.getPremiumAccount().getIsActiveTill();
+
+        PremiumAccountDto premiumAccountDto = PremiumAccountDto.builder().hasActivePremiumAccount(hasPremium)
+                .expiresAt(expiresAt).build();
+        UserRoleDto userDto = userMapper.userToLoginDto(validateLoggedInUser());
+
+        return UserContextDto.builder().user(userDto).premiumAccount(premiumAccountDto).build();
     }
 
     @Override
@@ -100,5 +113,11 @@ public class UserServiceImpl implements UserService {
         return authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(authority -> authority.equals(role));
+    }
+
+    @Override
+    public User validateLoggedInUser() {
+        Long loggedInUserId = getLoggedInUserId();
+        return userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException());
     }
 }

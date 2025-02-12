@@ -57,7 +57,6 @@ import com.accenture.backend.exception.custom.EntityNotFoundException;
 import com.accenture.backend.exception.custom.ForbiddenException;
 import com.accenture.backend.exception.custom.InvalidInputException;
 import com.accenture.backend.exception.custom.MaxProjectOwnerLimitExceededException;
-import com.accenture.backend.exception.custom.PageOutOfRangeException;
 
 public class ProjectServiceImplTest {
         @Mock
@@ -234,9 +233,6 @@ public class ProjectServiceImplTest {
 
                 assertThrows(InvalidInputException.class,
                                 () -> projectService.getPublicProjects(1, 0, "title", "asc"));
-
-                assertThrows(PageOutOfRangeException.class,
-                                () -> projectService.getPublicProjects(2, 5, "title", "asc"));
         }
 
         @Test

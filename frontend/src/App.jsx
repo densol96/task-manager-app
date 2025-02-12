@@ -23,6 +23,8 @@ import Members from "./features/projects/Members";
 import OwnerPanel from "./features/projects/OwnerPanel";
 import ProjectInvitations from "./features/projects/ProjectInvitations";
 import ProjectApplications from "./features/projects/ProjectApplications";
+import SuccessfullPayment from "./features/payments/SuccessfullPayment";
+import CancelledPayment from "./features/payments/CancelledPayment";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +87,8 @@ function App() {
                 <Route path="register" element={<Register />} />
                 <Route path="forgot-password" element={<ForgotPassword />} />
               </Route>
+              <Route path="payments/success" element={<SuccessfullPayment />} />
+              <Route path="payments/cancel" element={<CancelledPayment />} />
               <Route path="*" element={<PageNotFound />} />
             </Routes>
           </BrowserRouter>

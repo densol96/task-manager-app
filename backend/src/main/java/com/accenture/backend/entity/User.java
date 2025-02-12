@@ -35,6 +35,9 @@ public class User {
     @Column(name = "created_at")
     private Timestamp createdAt;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private PremiumAccount premiumAccount;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Notification> notifications = new ArrayList<>();

@@ -7,6 +7,6 @@ public class MaxProjectOwnerLimitExceededException extends RuntimeException {
     }
 
     public MaxProjectOwnerLimitExceededException() {
-        super("You have already reached the maximum number of projects you can own.");
+        super("Without premium account you can own up to 5 projects only!");
     }
 }

@@ -4,7 +4,6 @@ import com.accenture.backend.dto.response.BasicMessageDto;
 import com.accenture.backend.dto.response.HasUnreadDto;
 import com.accenture.backend.dto.response.NotificationShortDto;
 import com.accenture.backend.service.NotificationService;
-import com.accenture.backend.service.serviceimpl.NotificationServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 

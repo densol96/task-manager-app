@@ -20,6 +20,7 @@ const AuthProvider = ({ children }) => {
   } = useLocalStorage("jwt", "");
 
   const [user, setUser] = useState(null);
+  const [premiumAccount, SetPremiumAccount] = useState(null);
   const [isReady, setIsReady] = useState(false);
   const [trigger, setTrigger] = useState(true);
 
@@ -35,7 +36,8 @@ const AuthProvider = ({ children }) => {
           Authorization: `Bearer ${jwt}`,
         },
       });
-      setUser(response.data);
+      setUser(response.data.user);
+      SetPremiumAccount(response.data.premiumAccount);
     } catch (e) {
       console.log(e);
       setUser(null);
@@ -51,6 +53,7 @@ const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        premiumAccount,
         updateJwt,
         logout,
         refreshUser,

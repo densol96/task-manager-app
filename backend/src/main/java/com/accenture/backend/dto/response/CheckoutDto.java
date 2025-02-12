@@ -9,6 +9,6 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @Builder
-public class BasicMessageDto {
-    private String message;
+public class CheckoutDto {
+    private String checkoutUrl;
 }
