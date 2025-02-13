@@ -5,6 +5,8 @@ import com.accenture.backend.entity.Evidence;
 import com.accenture.backend.service.EvidenceService;
 import com.accenture.backend.service.ReportService;
 import com.accenture.backend.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,13 +21,19 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/report")
+@Tag(name = "Reports", description = "Requires User role")
 public class ReportController {
 
     public final UserService userService;
     public final ReportService reportService;
     public final EvidenceService evidenceService;
 
-
+    @Operation(
+            summary = "Submit a Report",
+            description = "Allows users to submit reports with up to 3 attached files (which will be stored on S3), each file up to 5MB in size. " +
+                    "allowed file types: .jpeg, .jpg, .png, .pdf" +
+                    "Note: Swagger may not support multiple file attachments."
+    )
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> createReport(@ModelAttribute CreateReportDto createReportDto) {
         String reporterEmail = SecurityContextHolder.getContext().getAuthentication().getName();

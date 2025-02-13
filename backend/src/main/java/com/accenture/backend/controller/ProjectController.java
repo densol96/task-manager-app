@@ -1,5 +1,6 @@
 package com.accenture.backend.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import com.accenture.backend.service.ProjectService;
 
 import lombok.RequiredArgsConstructor;
 
+@Hidden
 @RestController
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor

@@ -11,6 +11,8 @@ import com.accenture.backend.enums.report.ReportStatus;
 import com.accenture.backend.service.MailSendingService;
 import com.accenture.backend.service.ReportService;
 import com.accenture.backend.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,7 @@ import java.util.List;
 @Transactional
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/moderator-dashboard")
+@Tag(name = "Moderator Dashboard", description = "Accessibility: Moderator role required")
 public class ModeratorController {
 
     private final ReportService reportService;
@@ -38,12 +41,38 @@ public class ModeratorController {
     private final MailSendingService mailSendingService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // using this method u can get report for certain user, or specific report type, or specific report status ext
+    @Operation(
+            summary = "Get Reports for Moderator",
+            description = "Retrieve a list of reports that match the specified criteria, with support for sorting, pagination, and filtering. " +
+                    "The response includes a list of reports containing the following details:\n\n" +
+                    "- **id**: Report ID\n" +
+                    "- **accused**: An object containing the ID and name of the accused (`IdNameDto`)\n" +
+                    "- **reportType**: The type of the report (`ReportType`)\n" +
+                    "- **reportStatus**: The current status of the report (`ReportStatus`)\n" +
+                    "- **createdAt**: The date when the report was created\n\n" +
+                    "If you need detailed information about a specific report, you can access it through `/api/v1/moderator-dashboard/{reportId}`. " +
+                    "Default settings will be applied if certain parameters are not provided in the request. For more information about default settings, refer to the `ReportSearchHelper` class."
+    )
     @GetMapping
     public List<ShortReportInfoDto> getReports(@RequestBody ReportSearchDto reportSearchDto) {
         return reportService.getReports(reportSearchDto);
     }
 
+
+    @Operation(
+            summary = "Get Full Report Details for a Specific Report",
+            description = "Retrieve detailed information about a specific report. This endpoint is designed for moderators during the review process. " +
+                    "When a moderator accesses a report through this endpoint, the following actions will occur:\n\n" +
+                    "1. The report status will be updated to `IN_REVIEW` in the database.\n" +
+                    "2. A notification will be sent through the WebSocket at `ws/topic/reports`.\n\n" +
+                    "The WebSocket (`ws/topic/reports`) is protected by Spring Security and is only accessible to users with the 'MODERATOR' role. " +
+                    "This ensures secure communication of updates to all connected moderators.\n\n" +
+                    "If the report is currently displayed in the list of available reports (retrieved via the `/api/v1/moderator-dashboard` endpoint), " +
+                    "the front-end should either:\n\n" +
+                    "- Remove it from the view, or\n" +
+                    "- Make a request to the database to update the list of available reports.\n\n" +
+                    "The exact behavior depends on the front-end implementation."
+    )
     @GetMapping("/{reportId}")
     public ReportInfoDto getReportDetail(@PathVariable long reportId) {
         log.info("getting details about moderator who reviewing report {}", reportId);
@@ -60,7 +89,14 @@ public class ModeratorController {
         return reportService.getReportDetail(reportId);
     }
 
+    @Operation(
+            summary = "Moderator Decision Handling for a Report",
+            description = "This endpoint is called from the front end, even if the moderator does not make a decision but only views the report details and exits. " +
+                    "to make the report visible again to other moderators. This endpoint interacts with services to save updated info about report to database and if needed execute appropriate actions, such as: " +
+                    "- Banning the account and sending an email notification to the user, or " +
+                    "- Issuing a warning through the local system."
 
+    )
     @PutMapping("/validate")
     public void validateReport(@Valid @RequestBody ReportValidationResultDto dto) {
         log.info("report {} is validated, updating it status to {} in database", dto.getReportId(), dto.getReportStatus());
