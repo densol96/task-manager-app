@@ -18,7 +18,7 @@ import MyProjectsPage from "./pages/MyProjectsPage";
 import Invitations from "./pages/Invitations";
 import Applications from "./pages/Applications";
 import Project from "./pages/Project";
-import Tasks from "./features/projects/Tasks";
+import Tasks from "./features/tasks/Tasks";
 import Members from "./features/projects/Members";
 import OwnerPanel from "./features/projects/OwnerPanel";
 import ProjectInvitations from "./features/projects/ProjectInvitations";

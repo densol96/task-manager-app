@@ -37,3 +37,5 @@ export const errorParser = (e, logout) => {
     message || e.response?.data?.message || "Wrong input. Check and try again!"
   );
 };
+
+export const getJWT = () => JSON.parse(localStorage.getItem("jwt"));

@@ -19,10 +19,12 @@ public class TaskService {
     private final MemberTaskAssignmentRepository memberTaskAssignmentRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final UserService userService;
 
     public TaskService(TaskRepository taskRepository, TaskLabelRepository taskLabelRepository,
-                       TaskDiscussionMessageRepository taskDiscussionMessageRepository,
-                       MemberTaskAssignmentRepository memberTaskAssignmentRepository, ProjectRepository projectRepository, ProjectMemberRepository projectMemberRepository) {
+            TaskDiscussionMessageRepository taskDiscussionMessageRepository,
+            MemberTaskAssignmentRepository memberTaskAssignmentRepository, ProjectRepository projectRepository,
+            ProjectMemberRepository projectMemberRepository) {
         this.taskRepository = taskRepository;
         this.taskLabelRepository = taskLabelRepository;
         this.taskDiscussionMessageRepository = taskDiscussionMessageRepository;
