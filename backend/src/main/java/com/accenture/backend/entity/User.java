@@ -1,6 +1,7 @@
 package com.accenture.backend.entity;
 
 import com.accenture.backend.enums.AuthProvider;
+import com.accenture.backend.enums.MessagePrivacy;
 import com.accenture.backend.enums.Role;
 
 import jakarta.persistence.CascadeType;
@@ -63,4 +64,8 @@ public class User {
     protected void onCreate() {
         createdAt = new Timestamp(System.currentTimeMillis());
     }
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MessagePrivacy messagePrivacy = MessagePrivacy.ANYONE;
 }
