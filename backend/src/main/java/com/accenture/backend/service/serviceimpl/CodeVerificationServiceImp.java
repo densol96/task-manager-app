@@ -15,16 +15,16 @@ public class CodeVerificationServiceImp implements CodeVerificationService {
     private final StringRedisTemplate stringRedisTemplate;
 
     @Override
-    public void storeCode(String email, String code){
+    public void storeCode(String email, String code) {
         log.info("Storing verification code for email: {}", email);
         stringRedisTemplate.opsForValue().set("VERIFY_" + email, code, 5, TimeUnit.MINUTES);
     }
 
     @Override
-    public boolean verifyCode(String email, String code){
+    public boolean verifyCode(String email, String code) {
         log.info("Verifying verification code for email: {}", email);
         String storedCode = stringRedisTemplate.opsForValue().get("VERIFY_" + email);
 
-        return storedCode!=null &&storedCode.equals(code);
+        return storedCode != null && storedCode.equals(code);
     }
 }

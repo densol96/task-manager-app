@@ -10,11 +10,12 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProjectMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Setter(value = AccessLevel.NONE)
     private Long id;
 
     @ManyToOne
@@ -27,30 +28,26 @@ public class ProjectMember {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProjectRole projectRole;
+    @Builder.Default
+    private Role projectRole = ProjectMember.Role.USER;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinDate;
 
     @OneToMany(mappedBy = "postedBy", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<ProjectDiscussion> discussions = new ArrayList<>();
 
     @OneToMany(mappedBy = "postedBy", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<ProjectDiscussionMessage> discussionMessages = new ArrayList<>();
 
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<MemberTaskAssignment> taskAssignments = new ArrayList<>();
 
-    public static enum ProjectRole {
+    public static enum Role {
         OWNER, MANAGER, USER
-    }
-
-    @Builder
-    public ProjectMember(User user, Project project, ProjectRole projectRole, LocalDateTime joinDate) {
-        this.user = user;
-        this.project = project;
-        this.projectRole = (projectRole != null) ? projectRole : ProjectRole.USER;
-        this.joinDate = joinDate;
     }
 
     @PrePersist
@@ -59,5 +56,4 @@ public class ProjectMember {
             joinDate = LocalDateTime.now();
         }
     }
-
 }

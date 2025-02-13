@@ -9,6 +9,8 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProjectInteraction {
 
     @Id
@@ -26,38 +28,23 @@ public class ProjectInteraction {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private InteractionType type;
+    private Type type;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private InteractionStatus status;
+    private Status status;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime initAt;
 
-    @Column
     private LocalDateTime responseDate;
 
-    private String comment;
-
-    public static enum InteractionType {
+    public static enum Type {
         INVITATION, APPLICATION
     }
 
-    public static enum InteractionStatus {
+    public static enum Status {
         PENDING, ACCEPTED, DECLINED
-    }
-
-    public ProjectInteraction(User user, Project project, InteractionType type, InteractionStatus status,
-            LocalDateTime initAt, LocalDateTime responseDate, String comment) {
-        this.user = user;
-        this.project = project;
-        this.type = type;
-        this.status = status;
-        this.initAt = initAt;
-        this.responseDate = responseDate;
-        this.comment = comment;
-
     }
 
     @PrePersist

@@ -9,6 +9,8 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProjectDiscussionMessage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,16 +30,6 @@ public class ProjectDiscussionMessage {
     @ManyToOne
     @JoinColumn(name = "discussion_id", nullable = false)
     private ProjectDiscussion discussion;
-
-    @Builder
-    public ProjectDiscussionMessage(String message, LocalDateTime createdAt,
-            ProjectMember postedBy,
-            ProjectDiscussion discussion) {
-        this.message = message;
-        this.postedBy = postedBy;
-        this.discussion = discussion;
-        this.createdAt = createdAt;
-    }
 
     @PrePersist
     public void onPrePersist() {

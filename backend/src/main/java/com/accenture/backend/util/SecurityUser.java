@@ -35,4 +35,9 @@ public class SecurityUser implements UserDetails {
     public boolean isAccountNonExpired() {
         return !userRoleDto.getRole().equals(Role.DISABLED);
     }
+
+    public Long getId() {
+        return userRoleDto.getId();
+    }
 }
+
