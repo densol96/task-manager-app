@@ -1,9 +1,17 @@
 package com.accenture.backend.service;
 
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import java.io.IOException;
+
+import org.springframework.security.core.Authentication;
+
+import com.accenture.backend.dto.response.JwtDto;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public interface OAuth2Service {
-    UserDetails findOrCreateUser(OAuth2User ouath2User);
+    void handleOAuth2Success(HttpServletRequest request, HttpServletResponse response,
+            Authentication authentication) throws IOException;
 
+    JwtDto exchangeUUIDtokenForJwt(String uuid);
 }

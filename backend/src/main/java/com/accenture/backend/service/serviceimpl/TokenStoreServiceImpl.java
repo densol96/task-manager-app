@@ -6,10 +6,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.accenture.backend.exception.InvalidInputException;
-import com.accenture.backend.service.TokenStore;
+import org.springframework.stereotype.Service;
 
-public class TokenStoreImpl implements TokenStore {
+import com.accenture.backend.exception.InvalidInputException;
+import com.accenture.backend.exception.InvalidUUIDException;
+import com.accenture.backend.service.TokenStoreService;
+
+@Service
+public class TokenStoreServiceImpl implements TokenStoreService {
 
     private ConcurrentHashMap<String, String> tokenStore = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> tokenExpiry = new ConcurrentHashMap<>();
@@ -17,7 +21,7 @@ public class TokenStoreImpl implements TokenStore {
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    public TokenStoreImpl() {
+    public TokenStoreServiceImpl() {
         scheduler.scheduleAtFixedRate(this::removeExpiredTokens, TOKEN_TTL, TOKEN_TTL, TimeUnit.MILLISECONDS);
     }
 
@@ -46,6 +50,10 @@ public class TokenStoreImpl implements TokenStore {
 
         String token = tokenStore.get(uuid);
         tokenStore.remove(uuid);
+
+        if (token == null)
+            throw new InvalidUUIDException();
+
         return token;
     }
 

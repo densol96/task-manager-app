@@ -18,7 +18,7 @@ public class RegistrationController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<?> createUser(@RequestBody @Valid UserInfoDto userInfo) {
+    public ResponseEntity<?> createUser(@Valid @RequestBody UserInfoDto userInfo) {
         userService.createUser(userInfo);
 
         return ResponseEntity.ok("User created");

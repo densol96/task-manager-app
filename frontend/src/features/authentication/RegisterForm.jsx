@@ -9,6 +9,7 @@ import Button from "../../ui/Button";
 import Input from "../../ui/Input";
 import axios from "axios";
 import { errorParser } from "../../helpers/functions";
+import GoogleProvider from "./GoogleProvider";
 
 export const RegisterForm = () => {
   const [email, setEmail] = useState("");
@@ -83,6 +84,7 @@ export const RegisterForm = () => {
         />
       </FormLine>
       <Button>Submit</Button>
+      <GoogleProvider type="sign-up" />
       <AppLink to="/login">Sign in</AppLink>
       <AppLink to="/forgot-password">Forgot password</AppLink>
     </Form>

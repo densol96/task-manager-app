@@ -1,6 +1,6 @@
 package com.accenture.backend.service;
 
-public interface TokenStore {
+public interface TokenStoreService {
     public void addToken(String uuid, String token);
 
     public String addTokenAndReturnUUID(String token);

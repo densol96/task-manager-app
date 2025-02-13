@@ -1,6 +1,5 @@
 package com.accenture.backend.config.security;
 
-import com.accenture.backend.service.JwtService;
 import com.accenture.backend.service.OAuth2Service;
 import com.accenture.backend.util.JwtAuthenticationFilter;
 import lombok.AllArgsConstructor;
@@ -9,13 +8,11 @@ import java.util.Arrays;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
+
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -27,7 +24,6 @@ public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
         private final OAuth2Service oauth2Service;
-        private final JwtService jwtService;
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -45,6 +41,8 @@ public class SecurityConfig {
                                 }))
                                 .authorizeHttpRequests(authorize -> authorize
                                                 .requestMatchers("/api/v1/login/**", "/api/v1/sign-up/**",
+                                                                "/api/v1/oauth2/**",
+                                                                "/api/v1/payments/webhook",
                                                                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                                                 .permitAll()
                                                 .requestMatchers("/api/v1/identity/**")
@@ -53,21 +51,13 @@ public class SecurityConfig {
                                                                 "/api/v1/user/email-code/**")
                                                 .hasRole("NOT_CONFIRMED")
                                                 .requestMatchers("/api/v1/user/**", "/api/v1/projects/**",
-                                                                "/api/v1/tasks/**", "/api/v1/notifications/**")
+                                                                "/api/v1/tasks/**", "/api/v1/notifications/**",
+                                                                "/api/v1/payments/create-checkout-session")
                                                 .hasRole("USER")
                                                 .anyRequest()
                                                 .denyAll())
                                 .oauth2Login(oauth2 -> oauth2
-                                                .successHandler((request, response, authentication) -> {
-                                                        OAuth2User oAuth2User = (OAuth2User) authentication
-                                                                        .getPrincipal();
-                                                        UserDetails userDetails = oauth2Service
-                                                                        .findOrCreateUser(oAuth2User);
-                                                        String jwtToken = jwtService.generateToken(userDetails);
-                                                        String redirectUrl = "http://localhost:3000/redirect?token="
-                                                                        + jwtToken;
-                                                        response.sendRedirect(redirectUrl);
-                                                }))
+                                                .successHandler(oauth2Service::handleOAuth2Success))
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
