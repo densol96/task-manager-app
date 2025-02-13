@@ -1,6 +1,7 @@
 package com.accenture.backend.util;
 
 import com.accenture.backend.dto.user.UserRoleDto;
+import com.accenture.backend.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,5 +29,10 @@ public class SecurityUser implements UserDetails {
     @Override
     public String getUsername() {
         return userRoleDto.getEmail();
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return !userRoleDto.getRole().equals(Role.DISABLED);
     }
 }

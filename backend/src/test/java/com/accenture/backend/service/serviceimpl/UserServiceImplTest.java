@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 
-import com.accenture.backend.dto.user.UserInfoDto;
+import com.accenture.backend.dto.user.CreateUserInfoDto;
 import com.accenture.backend.dto.user.UserRoleDto;
 import com.accenture.backend.entity.User;
 import com.accenture.backend.enums.Role;
@@ -88,12 +88,12 @@ public class UserServiceImplTest {
     @Test
     void createUser_userAlreadyExists() {
         String email = "test@example.com";
-        UserInfoDto userInfoDto = new UserInfoDto();
-        userInfoDto.setEmail(email);
+        CreateUserInfoDto createUserInfoDto = new CreateUserInfoDto();
+        createUserInfoDto.setEmail(email);
 
         when(userRepository.countUserByEmail(email)).thenReturn(true);
 
-        assertThrows(EmailAlreadyInUseException.class, () -> userService.createUser(userInfoDto));
+        assertThrows(EmailAlreadyInUseException.class, () -> userService.createUser(createUserInfoDto));
         verify(userRepository, times(1)).countUserByEmail(email);
         verify(userRepository, times(0)).save(any(User.class));
     }
@@ -102,7 +102,7 @@ public class UserServiceImplTest {
     @Test
     void createUser_newUser() {
         String email = "test@example.com";
-        UserInfoDto userInfoDto = UserInfoDto.builder()
+        CreateUserInfoDto createUserInfoDto = CreateUserInfoDto.builder()
                 .email("test@example.com")
                 .firstName("John")
                 .lastName("Doe")
@@ -111,16 +111,16 @@ public class UserServiceImplTest {
 
         when(userRepository.countUserByEmail(email)).thenReturn(false);
         when(passwordEncoder.encode(ArgumentMatchers.anyString())).thenReturn("encodedPassword");
-        when(userMapper.userInfoDtoToUser(any(UserInfoDto.class))).thenReturn(new User());
+        when(userMapper.userInfoDtoToUser(any(CreateUserInfoDto.class))).thenReturn(new User());
 
-        userService.createUser(userInfoDto);
+        userService.createUser(createUserInfoDto);
 
         verify(userRepository, times(1)).countUserByEmail(email);
         verify(passwordEncoder, times(1)).encode("securePass123");
-        verify(userMapper, times(1)).userInfoDtoToUser(userInfoDto);
+        verify(userMapper, times(1)).userInfoDtoToUser(createUserInfoDto);
         verify(userRepository, times(1)).save(any(User.class));
 
-        assertEquals("encodedPassword", passwordEncoder.encode(userInfoDto.getPassword()));
+        assertEquals("encodedPassword", passwordEncoder.encode(createUserInfoDto.getPassword()));
     }
 
     @Test

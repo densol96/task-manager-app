@@ -3,7 +3,7 @@ package com.accenture.backend.controller;
 
 import com.accenture.backend.dto.user.ChangePasswordDto;
 import com.accenture.backend.enums.Role;
-import com.accenture.backend.service.CodeSendingService;
+import com.accenture.backend.service.MailSendingService;
 import com.accenture.backend.service.CodeVerificationService;
 import com.accenture.backend.service.UserService;
 import com.accenture.backend.util.VerificationCodeGenerator;
@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProfileSettingController {
 
     private final CodeVerificationService codeVerificationService;
-    private final CodeSendingService codeSendingService;
+    private final MailSendingService mailSendingService;
     private final UserService userService;
 
     @PostMapping("/email-request")
@@ -33,7 +34,7 @@ public class ProfileSettingController {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         String code = VerificationCodeGenerator.generateCode();
 
-        codeSendingService.sendEmail(email, code);
+        mailSendingService.sendCode(email, code);
         codeVerificationService.storeCode(email, code);
     }
 
@@ -50,7 +51,7 @@ public class ProfileSettingController {
         }
     }
 
-    @PostMapping("/change-password")
+    @PutMapping("/change-password")
     public void changePassword(@RequestBody @Valid ChangePasswordDto changePasswordDto){
         userService.changePassword(changePasswordDto);
     }

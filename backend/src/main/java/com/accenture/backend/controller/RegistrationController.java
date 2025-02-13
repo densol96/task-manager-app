@@ -1,6 +1,6 @@
 package com.accenture.backend.controller;
 
-import com.accenture.backend.dto.user.UserInfoDto;
+import com.accenture.backend.dto.user.CreateUserInfoDto;
 import com.accenture.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ public class RegistrationController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<?> createUser(@RequestBody @Valid UserInfoDto userInfo){
+    public ResponseEntity<?> createUser(@RequestBody @Valid CreateUserInfoDto userInfo){
         userService.createUser(userInfo);
 
         return ResponseEntity.ok("User created");

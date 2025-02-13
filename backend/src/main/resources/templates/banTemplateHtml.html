@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${companyName} + ' Ban Notification'">Ban Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background-color: #d32f2f;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            font-size: 24px;
+        }
+
+        .content {
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .reason {
+            display: inline-block;
+            background-color: #d32f2f;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 20px;
+            text-align: center;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 20px auto;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 15px;
+            font-size: 14px;
+            color: #888;
+            background-color: #f4f4f9;
+        }
+
+        .footer a {
+            color: #d32f2f;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header" th:text="${companyName}"></div>
+    <div class="content">
+        <p>Dear User,</p>
+        <p>We regret to inform you that your account has been banned due to a violation of our terms and conditions. The reason for the ban is:</p>
+        <div class="reason" th:text="${reason}"></div>
+        <p>If you believe this is a mistake or have any questions, please contact our support team for assistance.</p>
+        <p>We value the integrity and safety of our community and appreciate your understanding.</p>
+        <p>Sincerely,</p>
+        <p>The <span th:text="${companyName}"></span> Team</p>
+    </div>
+    <div class="footer">
+        <p>&copy; 2025 <span th:text="${companyName}"></span>. All rights reserved.</p>
+        <p><a href="#">Privacy Policy</a> | <a href="#">Contact Support</a></p>
+    </div>
+</div>
+</body>
+</html>
