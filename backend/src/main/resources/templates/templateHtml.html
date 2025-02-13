@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="${companyName} + ' Approval Code'">TimelyAF Approval Code</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+
+    .email-container {
+      max-width: 600px;
+      margin: 50px auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background-color: #4caf50;
+      color: #ffffff;
+      text-align: center;
+      padding: 20px;
+      font-size: 24px;
+    }
+
+    .content {
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .approval-code {
+      display: inline-block;
+      background-color: #4caf50;
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 24px;
+      text-align: center;
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin: 20px auto;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 15px;
+      font-size: 14px;
+      color: #888;
+      background-color: #f4f4f9;
+    }
+
+    .footer a {
+      color: #4caf50;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+<div class="email-container">
+  <div class="header" th:text="${companyName}">TimelyAF</div>
+  <div class="content">
+    <p>Hi there,</p>
+    <p>We received a request to verify your email address. Please use the following code to complete your email verification process:</p>
+    <div class="approval-code" th:text="${approvalCode}"></div>
+    <p>If you didn’t request this, please ignore this email or contact our support team for assistance.</p>
+    <p>Thank you for using <span th:text="${companyName}">TimelyAF</span>!</p>
+  </div>
+  <div class="footer">
+    <p>&copy; 2025 <span th:text="${companyName}">TimelyAF</span>. All rights reserved.</p>
+    <p><a href="#">Privacy Policy</a> | <a href="#">Contact Support</a></p>
+  </div>
+</div>
+</body>
+</html>
+

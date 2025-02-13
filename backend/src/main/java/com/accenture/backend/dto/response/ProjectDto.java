@@ -1,11 +1,15 @@
 package com.accenture.backend.dto.response;
 
-import java.time.LocalDateTime;
+import lombok.*;
 
-public record ProjectDto(
-                Long id,
-                String title,
-                String description,
-                LocalDateTime createdAt,
-                OwnerShortDto owner) {
+@Getter
+@Setter
+@AllArgsConstructor
+@Builder
+public class ProjectDto {
+    private PublicProjectDto projectInfo;
+    private ConfigDto config;
+
+    public ProjectDto() {
+    }
 }

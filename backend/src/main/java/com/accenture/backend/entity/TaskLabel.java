@@ -11,6 +11,7 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @Entity
+@Table(name = "task_labels")
 public class TaskLabel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

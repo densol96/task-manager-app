@@ -16,9 +16,9 @@ public class TaskDiscussionMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // @ManyToOne
-    // @JoinColumn(name = "author_id", nullable = false)
-    // private ProjectMember author;
+    @ManyToOne
+    @JoinColumn(name = "author_id", nullable = false)
+    private ProjectMember author;
 
     @Column(nullable = false)
     private String message;

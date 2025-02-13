@@ -10,6 +10,8 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProjectDiscussion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,15 +33,8 @@ public class ProjectDiscussion {
     private Project project;
 
     @OneToMany(mappedBy = "discussion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<ProjectDiscussionMessage> messages = new ArrayList<>();
-
-    @Builder
-    public ProjectDiscussion(String title, LocalDateTime createdAt, ProjectMember postedBy, Project project) {
-        this.title = title;
-        this.postedBy = postedBy;
-        this.project = project;
-        this.createdAt = createdAt;
-    }
 
     @PrePersist
     public void onPrePersist() {
