@@ -9,4 +9,7 @@ import lombok.*;
 public class ProjectDto {
     private PublicProjectDto projectInfo;
     private ConfigDto config;
+
+    public ProjectDto() {
+    }
 }

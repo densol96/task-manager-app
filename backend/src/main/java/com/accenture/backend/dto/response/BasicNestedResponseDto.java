@@ -9,4 +9,7 @@ import lombok.*;
 public class BasicNestedResponseDto<T> {
     private String message;
     private T data;
+
+    public BasicNestedResponseDto(ProjectDto projectDto) {
+    }
 }

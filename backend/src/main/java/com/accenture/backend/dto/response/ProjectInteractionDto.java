@@ -14,4 +14,7 @@ public class ProjectInteractionDto {
     private OwnerShortDto owner;
     private LocalDateTime initAt;
     private String comment;
+
+    public ProjectInteractionDto() {
+    }
 }

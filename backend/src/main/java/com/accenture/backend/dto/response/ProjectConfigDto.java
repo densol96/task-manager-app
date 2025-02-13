@@ -14,4 +14,7 @@ public class ProjectConfigDto {
     private Long projectId;
     private Boolean isPublic;
     private Integer maxParticipants;
+
+    public ProjectConfigDto() {
+    }
 }

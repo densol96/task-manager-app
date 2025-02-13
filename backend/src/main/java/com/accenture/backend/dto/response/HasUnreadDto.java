@@ -11,4 +11,8 @@ import lombok.Setter;
 @Builder
 public class HasUnreadDto {
     private Boolean hasUnreadMessages;
+
+    public boolean getHasUnread() {
+    return hasUnreadMessages;
+    }
 }
