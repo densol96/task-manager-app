@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final HandlerExceptionResolver handlerExceptionResolver;
+    //private final HandlerExceptionResolver handlerExceptionResolver;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
@@ -34,8 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain
-    ) throws ServletException, IOException {
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
 
         log.debug("Authorization header: {}", authHeader);
@@ -62,8 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
-                            userDetails.getAuthorities()
-                    );
+                            userDetails.getAuthorities());
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
@@ -77,7 +75,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (Exception exception) {
             log.error("Error during JWT authentication", exception);
-            handlerExceptionResolver.resolveException(request, response, null, exception);
+            //handlerExceptionResolver.resolveException(request, response, null, exception);
         }
     }
 }

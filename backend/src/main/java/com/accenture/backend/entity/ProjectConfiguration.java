@@ -8,6 +8,8 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProjectConfiguration {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,14 +27,6 @@ public class ProjectConfiguration {
     private Integer maxParticipants;
 
     private String backgroundImage;
-
-    @Builder
-    public ProjectConfiguration(Project project, Boolean isPublic, Integer maxParticipants, String backgroundImage) {
-        this.project = project;
-        this.isPublic = isPublic;
-        this.maxParticipants = maxParticipants;
-        this.backgroundImage = backgroundImage;
-    }
 
     @PrePersist
     public void prePersist() {

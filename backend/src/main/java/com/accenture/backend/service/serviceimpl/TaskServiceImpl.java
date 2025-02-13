@@ -47,11 +47,11 @@ public class TaskServiceImpl implements TaskService {
         ProjectMember member = projectMemberRepository.findByUserIdAndProjectId(loggedInUserId, projectId)
                 .orElseThrow(() -> new RuntimeException("User is not a member of this project"));
 
-        if (canModify && !(member.getProjectRole() == ProjectMember.ProjectRole.OWNER || member.getProjectRole() == ProjectMember.ProjectRole.MANAGER)) {
+        if (canModify && !(member.getProjectRole() == ProjectMember.Role.OWNER || member.getProjectRole() == ProjectMember.Role.MANAGER)) {
             //throw new RuntimeException("Permission denied. Only OWNER or MANAGER can modify tasks.");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Permission denied. Only OWNER or MANAGER can modify tasks.");
         }
-        if (!canModify && !isLabelAction && member.getProjectRole() == ProjectMember.ProjectRole.USER) {
+        if (!canModify && !isLabelAction && member.getProjectRole() == ProjectMember.Role.USER) {
             //throw new RuntimeException("Permission denied. USERS can only view tasks.");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Permission denied. USERS can only view tasks.");
         }

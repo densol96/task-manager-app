@@ -1,17 +1,24 @@
 package com.accenture.backend.service.serviceimpl;
 
+import com.accenture.backend.dto.response.PremiumAccountDto;
+import com.accenture.backend.dto.response.UserContextDto;
 import com.accenture.backend.dto.user.ChangePasswordDto;
 import com.accenture.backend.dto.user.UserRoleDto;
 import com.accenture.backend.dto.user.UserInfoDto;
 import com.accenture.backend.entity.User;
 import com.accenture.backend.enums.Role;
+import com.accenture.backend.exception.AuthenticationRuntimeException;
 import com.accenture.backend.exception.EmailAlreadyInUseException;
 import com.accenture.backend.mappper.UserMapper;
 import com.accenture.backend.util.SecurityUser;
 import com.accenture.backend.repository.UserRepository;
+import com.accenture.backend.service.PremiumAccountService;
 import com.accenture.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.time.LocalDateTime;
+
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,6 +26,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 
 @Slf4j
 @Service
@@ -29,6 +38,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final PremiumAccountService premiumAccountService;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -48,7 +58,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void createUser(UserInfoDto userInfoDto){
+    public void createUser(UserInfoDto userInfoDto) {
         if (userExists(userInfoDto.getEmail())) {
             log.error("Email {} is already taken", userInfoDto.getEmail());
             throw new EmailAlreadyInUseException("This email already taken");
@@ -67,7 +77,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean userExists(String email){
+    public boolean userExists(String email) {
         log.info("checking existence of the user with email: {}", email);
         return userRepository.countUserByEmail(email);
     }
@@ -107,9 +117,42 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Long getLoggedInUserId() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findUserByEmail(email)
-                .map(User::getId)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || !(authentication.getPrincipal() instanceof SecurityUser)) {
+            throw new AuthenticationRuntimeException();
+        }
+        return ((SecurityUser) authentication.getPrincipal()).getId();
+    }
+
+    @Override
+    public UserContextDto getIdentity() {
+        User user = validateLoggedInUser();
+        boolean hasPremium = premiumAccountService.userHasActivePremiumAccount(user.getId());
+        LocalDateTime expiresAt = hasPremium == false ? null : user.getPremiumAccount().getIsActiveTill();
+
+        PremiumAccountDto premiumAccountDto = PremiumAccountDto.builder().hasActivePremiumAccount(hasPremium)
+                .expiresAt(expiresAt).build();
+        UserRoleDto userDto = userMapper.userToLoginDto(validateLoggedInUser());
+
+        return UserContextDto.builder().user(userDto).premiumAccount(premiumAccountDto).build();
+    }
+
+    @Override
+    public User validateLoggedInUser() {
+        Long loggedInUserId = getLoggedInUserId();
+        return userRepository.findById(loggedInUserId).orElseThrow(() -> new AuthenticationRuntimeException());
+    }
+
+    @Override
+    public boolean hasRole(String role) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals(role));
     }
 }

@@ -62,7 +62,8 @@ class TaskServiceTest {
         when(projectRepository.findById(anyLong())).thenReturn(Optional.of(project));
         when(taskRepository.save(any(Task.class))).thenReturn(task);
 
-        TaskDto taskDto = new TaskDto(null, "Test Task", "Task Description", TaskStatus.IN_PROGRESS, TaskPriority.HIGH, LocalDateTime.now(), 1L);
+        TaskDto taskDto = new TaskDto(null, "Test Task", "Task Description", TaskStatus.IN_PROGRESS, TaskPriority.HIGH,
+                LocalDateTime.now(), 1L);
         TaskDto createdTask = taskService.createTask(taskDto);
 
         assertNotNull(createdTask);
@@ -85,8 +86,8 @@ class TaskServiceTest {
         existingTask.setDeadline(LocalDateTime.now().plusDays(1));
         existingTask.setProject(project);
 
-
-        TaskDto taskDto = new TaskDto(1L, "Updated Title", "Updated Description", TaskStatus.IN_PROGRESS, TaskPriority.HIGH, LocalDateTime.now().plusDays(3), 1L);
+        TaskDto taskDto = new TaskDto(1L, "Updated Title", "Updated Description", TaskStatus.IN_PROGRESS,
+                TaskPriority.HIGH, LocalDateTime.now().plusDays(3), 1L);
 
         when(taskRepository.findById(1L)).thenReturn(Optional.of(existingTask));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -167,7 +168,6 @@ class TaskServiceTest {
         when(taskLabelRepository.save(any(TaskLabel.class))).thenReturn(label);
 
         TaskLabelDto updatedLabel = taskService.updateLabel(1L, new TaskLabelDto("Feature", "blue"));
-
 
         assertNotNull(updatedLabel);
         assertEquals("Feature", updatedLabel.getTitle());
