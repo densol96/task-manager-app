@@ -8,7 +8,6 @@ import com.accenture.backend.entity.*;
 import com.accenture.backend.enums.TaskPriority;
 import com.accenture.backend.enums.TaskStatus;
 import com.accenture.backend.repository.*;
-import com.accenture.backend.service.TaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +22,7 @@ import java.util.*;
 class TaskServiceTest {
 
     @InjectMocks
-    private TaskService taskService;
+    private TaskServiceImpl taskService;
 
     @Mock
     private TaskRepository taskRepository;

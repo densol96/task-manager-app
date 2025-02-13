@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final HandlerExceptionResolver handlerExceptionResolver;
+    //private final HandlerExceptionResolver handlerExceptionResolver;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
@@ -75,7 +75,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (Exception exception) {
             log.error("Error during JWT authentication", exception);
-            handlerExceptionResolver.resolveException(request, response, null, exception);
+            //handlerExceptionResolver.resolveException(request, response, null, exception);
         }
     }
 }
