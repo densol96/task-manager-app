@@ -10,6 +10,7 @@ import Input from "../../ui/Input";
 import axios from "axios";
 import { useAuthContext } from "../../context/AuthContext";
 import { errorParser } from "../../helpers/functions";
+import GoogleProvider from "./GoogleProvider";
 
 export const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -54,6 +55,7 @@ export const LoginForm = () => {
         />
       </FormLine>
       <Button>Submit</Button>
+      <GoogleProvider type="sign-in" />
       <AppLink to="/forgot-password">Forgot password</AppLink>
       <AppLink to="/register">Create account</AppLink>
     </Form>
