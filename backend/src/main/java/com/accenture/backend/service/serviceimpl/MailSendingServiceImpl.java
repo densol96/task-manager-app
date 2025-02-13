@@ -45,7 +45,7 @@ public class MailSendingServiceImpl implements MailSendingService {
             mailSender.send(mimeMessage);
 
             log.info("verification email was successfully sent to email {}:", toEmail);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Exception occurred while sending verification email to {}. Exception details: {}", toEmail, e.getMessage());
             throw new MailServiceException("Exception occurred while sending verification email to " + toEmail);
         }
@@ -73,7 +73,7 @@ public class MailSendingServiceImpl implements MailSendingService {
             mailSender.send(mimeMessage);
 
             log.info("ban notification email was successfully sent to email {}:", toEmail);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Exception occurred while sending ban details email to {}. Exception details: {}", toEmail, e.getMessage());
             throw new MailServiceException("Exception occurred while sending ban details email to " + toEmail);
         }

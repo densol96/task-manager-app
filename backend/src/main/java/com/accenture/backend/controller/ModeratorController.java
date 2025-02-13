@@ -21,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -53,7 +54,7 @@ public class ModeratorController {
                     "If you need detailed information about a specific report, you can access it through `/api/v1/moderator-dashboard/{reportId}`. " +
                     "Default settings will be applied if certain parameters are not provided in the request. For more information about default settings, refer to the `ReportSearchHelper` class."
     )
-    @GetMapping
+    @PostMapping
     public List<ShortReportInfoDto> getReports(@RequestBody ReportSearchDto reportSearchDto) {
         return reportService.getReports(reportSearchDto);
     }
