@@ -12,7 +12,7 @@ import lombok.NonNull;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserInfoDto {
+public class CreateUserInfoDto {
 
     @Email
     @NonNull

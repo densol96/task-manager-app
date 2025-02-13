@@ -2,7 +2,9 @@ package com.accenture.backend.config.security;
 
 import com.accenture.backend.service.OAuth2Service;
 import com.accenture.backend.util.JwtAuthenticationFilter;
-import lombok.AllArgsConstructor;
+
+import lombok.RequiredArgsConstructor;
+
 
 import java.util.Arrays;
 
@@ -19,7 +21,7 @@ import org.springframework.web.cors.CorsConfiguration;
 
 @Configuration
 @EnableWebSecurity
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -54,6 +56,8 @@ public class SecurityConfig {
                                                                 "/api/v1/tasks/**", "/api/v1/notifications/**",
                                                                 "/api/v1/payments/create-checkout-session")
                                                 .hasRole("USER")
+                                                .requestMatchers("/api/v1/admin-dashboard/**").hasRole("ADMIN")
+                                                .requestMatchers("/api/v1/moderator-dashboard/**").hasRole("MODERATOR")
                                                 .anyRequest()
                                                 .denyAll())
                                 .oauth2Login(oauth2 -> oauth2

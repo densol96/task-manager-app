@@ -1,5 +1,6 @@
 package com.accenture.backend.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ import com.accenture.backend.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+@Hidden
 @RestController
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor

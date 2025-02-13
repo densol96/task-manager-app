@@ -3,8 +3,8 @@ package com.accenture.backend.service.serviceimpl;
 import com.accenture.backend.dto.response.PremiumAccountDto;
 import com.accenture.backend.dto.response.UserContextDto;
 import com.accenture.backend.dto.user.ChangePasswordDto;
+import com.accenture.backend.dto.user.CreateUserInfoDto;
 import com.accenture.backend.dto.user.UserRoleDto;
-import com.accenture.backend.dto.user.UserInfoDto;
 import com.accenture.backend.entity.User;
 import com.accenture.backend.enums.Role;
 import com.accenture.backend.exception.AuthenticationRuntimeException;
@@ -58,19 +58,22 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void createUser(UserInfoDto userInfoDto) {
-        if (userExists(userInfoDto.getEmail())) {
-            log.error("Email {} is already taken", userInfoDto.getEmail());
+    public void createUser(CreateUserInfoDto createUserInfoDto){
+        if (userExists(createUserInfoDto.getEmail())) {
+            log.error("Email {} is already taken", createUserInfoDto.getEmail());
+
             throw new EmailAlreadyInUseException("This email already taken");
         }
 
-        saveUser(userInfoDto);
+        saveUser(createUserInfoDto);
     }
 
-    private void saveUser(UserInfoDto userInfoDto) {
-        log.info("Creating user with email: {}", userInfoDto.getEmail());
-        userInfoDto.setPassword(passwordEncoder.encode(userInfoDto.getPassword()));
-        User user = userMapper.userInfoDtoToUser(userInfoDto);
+    @Transactional
+    @Override
+    public void saveUser(CreateUserInfoDto createUserInfoDto) {
+        log.info("Creating user with email: {}", createUserInfoDto.getEmail());
+        createUserInfoDto.setPassword(passwordEncoder.encode(createUserInfoDto.getPassword()));
+        User user = userMapper.userInfoDtoToUser(createUserInfoDto);
 
         log.info("Saving user with email: {} to database", user.getEmail());
         userRepository.save(user);
@@ -82,6 +85,7 @@ public class UserServiceImpl implements UserService {
         return userRepository.countUserByEmail(email);
     }
 
+    @Transactional
     @Override
     public void changeRole(String email, Role role) {
         log.info("changing role for user: {}, now his role is: {}", email, role);
@@ -96,6 +100,22 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    @Transactional
+    @Override
+    public void changeRole(long userId, Role role) {
+        log.info("changing role for user with id: {}, now his role is: {}", userId, role);
+
+        User user = userRepository.findById(userId).orElseThrow(() -> {
+            log.error("User with id: {} was not found", userId);
+            return new UsernameNotFoundException("Username not found");
+        });
+
+        user.setRole(role);
+
+        userRepository.save(user);
+    }
+
+    @Transactional
     @Override
     public void changePassword(ChangePasswordDto changePasswordDto) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -116,6 +136,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public long getUserIdByEmail(String email) {
+        log.info("Getting user id by email: {}", email);
+         return userRepository.findUserByEmail(email).orElseThrow(() -> {
+            log.error("User with email: {} was not found", email);
+            return new UsernameNotFoundException("Username not found");
+        }).getId();
+    }
+
+
     public Long getLoggedInUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
@@ -156,3 +185,4 @@ public class UserServiceImpl implements UserService {
                 .anyMatch(authority -> authority.equals(role));
     }
 }
+
