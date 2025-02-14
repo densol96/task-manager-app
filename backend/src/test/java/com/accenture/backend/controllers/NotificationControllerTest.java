@@ -44,7 +44,8 @@ class NotificationControllerTest {
         Page<NotificationShortDto> page = new PageImpl<>(List.of(notificationDto));
         when(notificationService.getAllUserNotifications(any(), any())).thenReturn(page);
 
-        ResponseEntity<Page<NotificationShortDto>> response = notificationController.geAllNotificationsByUser(0, 5);
+        ResponseEntity<Page<NotificationShortDto>> response = notificationController.getAllNotificationsByUser(1, 5);
+
 
         assertThat(response.getStatusCodeValue()).isEqualTo(200);
         assertThat(response.getBody()).isNotNull().hasSize(1);
