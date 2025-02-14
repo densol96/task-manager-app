@@ -11,6 +11,7 @@ import { useState } from "react";
 import { createTask } from "../services/apiTasks";
 import { useQueryClient } from "@tanstack/react-query";
 import TaskPopup from "./TaskPopup";
+import toast from "react-hot-toast";
 
 const Section = styled.div`
   background-color: var(--color-brand-900);
@@ -93,7 +94,7 @@ function TasksList({ heading, cards, onAdd, onCardOpen, projectId, status }) {
           heading="Add a task"
           width={50}
           action={async () => {
-            createTask(
+            await createTask(
               {
                 title,
                 description,

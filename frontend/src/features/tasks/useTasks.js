@@ -12,7 +12,7 @@ function useTasks({ status, projectId, logout }) {
     error,
   } = useQuery({
     queryKey: ["tasks", projectId, status],
-    queryFn: () => getAll(status),
+    queryFn: () => getAll(status, projectId),
     retry: 1,
   });
   if (isError) console.log("useTasks error: ", error);

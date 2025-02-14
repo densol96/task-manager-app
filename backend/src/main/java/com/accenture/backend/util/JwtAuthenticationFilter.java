@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final HandlerExceptionResolver handlerExceptionResolver;
+    // private final HandlerExceptionResolver handlerExceptionResolver;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
@@ -71,11 +71,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.warn("JWT token is not valid for user: {}", userEmail);
                 }
             }
-
-            filterChain.doFilter(request, response);
         } catch (Exception exception) {
             log.error("Error during JWT authentication", exception);
-            handlerExceptionResolver.resolveException(request, response, null, exception);
         }
+
+        filterChain.doFilter(request, response);
     }
 }

@@ -25,7 +25,6 @@ import ProjectInvitations from "./features/projects/ProjectInvitations";
 import ProjectApplications from "./features/projects/ProjectApplications";
 import SuccessfullPayment from "./features/payments/SuccessfullPayment";
 import CancelledPayment from "./features/payments/CancelledPayment";
-import OAuth2Redirect from "./features/authentication/OAuth2Redirect";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,7 +89,6 @@ function App() {
               </Route>
               <Route path="payments/success" element={<SuccessfullPayment />} />
               <Route path="payments/cancel" element={<CancelledPayment />} />
-              <Route path="oauth2-redirect" element={<OAuth2Redirect />} />
               <Route path="*" element={<PageNotFound />} />
             </Routes>
           </BrowserRouter>

@@ -1,4 +1,4 @@
-import { ForgotPasswordForm } from "../features/authentication/ForgotPasswordForm copy";
+import { ForgotPasswordForm } from "../features/authentication/ForgotPasswordForm";
 import EntranceForm from "../ui/EntranceForm";
 import Heading from "../ui/Heading";
 import Logo from "../ui/Logo";

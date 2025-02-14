@@ -8,7 +8,7 @@ import Button from "../ui/Button";
 import { StyledEmptyMessage } from "../ui/StyledEmptyMessage";
 import { formatDate } from "../helpers/functions";
 import { FaPlus } from "react-icons/fa6";
-import { createContext } from "react";
+import { createContext, useContext } from "react";
 import { Modal } from "../ui/Modal";
 import ConfirmForm from "../features/projects/ConfirmForm";
 import { leaveProject } from "../features/services/apiProjects";
@@ -42,6 +42,8 @@ const OptionsHolder = styled.div`
 `;
 
 export const ProjectContext = createContext();
+
+export const useProjectContext = () => useContext(ProjectContext);
 
 function Project() {
   const queryClient = useQueryClient();

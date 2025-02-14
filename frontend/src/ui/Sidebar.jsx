@@ -74,10 +74,10 @@ function Sidebar() {
         <MainText>Task App Pro</MainText>
       </Heading> */}
       <StyledNav>
-        <NavItem to="/dashboard">
+        {/* <NavItem to="/dashboard">
           <MdSpaceDashboard />
           Dashboard
-        </NavItem>
+        </NavItem> */}
         <NavItem to="/projects-all">
           <IoDocumentsSharp />
           All Projects

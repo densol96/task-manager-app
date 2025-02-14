@@ -5,8 +5,8 @@ import { getJWT } from "../../helpers/functions";
 const API_URL = process.env.REACT_APP_API_URL;
 
 // TODO, IN_PROGRESS, FOR_REVIEW, DONE
-export async function getAll(status = "TODO") {
-  const API_ENDPOINT = `${API_URL}/tasks/status/${status}`;
+export async function getAll(status, projectId) {
+  const API_ENDPOINT = `${API_URL}/tasks/projects/${projectId}/status/${status}`;
   const response = await axios.get(API_ENDPOINT, {
     headers: { Authorization: `Bearer ${getJWT()}` },
   });

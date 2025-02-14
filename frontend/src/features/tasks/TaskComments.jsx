@@ -6,10 +6,24 @@ import { addComment } from "../services/apiTasks";
 import toast from "react-hot-toast";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatDate } from "../../helpers/functions";
 
 const Comments = styled.div`
-  max-height: 30rem;
+  max-height: 20rem;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const Comment = styled.div`
+  background-color: var(--color-brand-200);
+  padding: 1rem;
+  border: 6px;
+`;
+
+const SmallP = styled.div`
+  font-size: 1.2rem;
 `;
 
 function TaskComments({ taskId }) {
@@ -22,6 +36,7 @@ function TaskComments({ taskId }) {
       await addComment(taskId, {
         message: comment,
       });
+      setComment("");
       toast.success("Comment posted");
       queryClient.invalidateQueries({ queryKey: ["task-discussions", taskId] });
     } catch (e) {
@@ -29,20 +44,31 @@ function TaskComments({ taskId }) {
       toast.error("Service currently unavailable");
     }
   }
+
   return (
-    <>
+    <div>
+      {comments?.length ? (
+        <Comments>
+          {comments.map((comment) => (
+            <Comment>
+              <p>{comment.message}</p>
+              <SmallP>
+                Posted on: {formatDate(comment.postedAt)} by:{" "}
+                {comment.userInfo.email}
+              </SmallP>
+            </Comment>
+          ))}
+        </Comments>
+      ) : (
+        <p>No any task comments...</p>
+      )}
       <Textarea
         onChange={(e) => setComment(e.target.value)}
         value={comment}
         placeholder="Leave a comment to this task..."
       />
       <Button onClick={sendComment}>Send</Button>
-      {comments?.length ? (
-        <Comments></Comments>
-      ) : (
-        <p>No any task comments...</p>
-      )}
-    </>
+    </div>
   );
 }
 

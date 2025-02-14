@@ -24,18 +24,12 @@ public class LoginController {
 
     @PostMapping
     public ResponseEntity<String> login(@RequestBody LoginDto loginDto) {
-
-        System.out.println(loginDto.getPassword());
-
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getPassword()));
-
         SecurityContextHolder.getContext().setAuthentication(authentication);
-
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         System.out.println(loginDto.getPassword());
         String token = jwtService.generateToken(userDetails);
-
         return ResponseEntity.ok(token);
     }
 }
