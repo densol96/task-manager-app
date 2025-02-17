@@ -30,8 +30,10 @@ import org.springframework.data.domain.Pageable;
 
 import com.accenture.backend.entity.User;
 import com.accenture.backend.dto.request.AcceptProjectDto;
+import com.accenture.backend.dto.request.InvitationDto;
 import com.accenture.backend.dto.response.BasicMessageDto;
 import com.accenture.backend.dto.response.BasicNestedResponseDto;
+import com.accenture.backend.dto.response.ProjectConfigDto;
 import com.accenture.backend.dto.response.ProjectDto;
 import com.accenture.backend.dto.response.ProjectInteractionDto;
 import com.accenture.backend.dto.response.ProjectMemberInfoDto;
@@ -51,12 +53,16 @@ import com.accenture.backend.repository.ProjectInteractionRepository;
 import com.accenture.backend.repository.ProjectMemberRepository;
 import com.accenture.backend.repository.ProjectRepository;
 import com.accenture.backend.repository.UserRepository;
-
+import com.accenture.backend.service.PremiumAccountService;
 import com.accenture.backend.service.UserService;
+import com.accenture.backend.exception.AlreadyExistsException;
 import com.accenture.backend.exception.EntityNotFoundException;
 import com.accenture.backend.exception.ForbiddenException;
 import com.accenture.backend.exception.InvalidInputException;
+import com.accenture.backend.exception.InvalidInteractionException;
+import com.accenture.backend.exception.MaxParticipantsReachedException;
 import com.accenture.backend.exception.MaxProjectOwnerLimitExceededException;
+import com.accenture.backend.exception.UserAlreadyMemberException;
 
 public class ProjectServiceImplTest {
         @Mock
@@ -80,6 +86,9 @@ public class ProjectServiceImplTest {
         @Mock
         private UserService userService;
 
+        @Mock
+        private PremiumAccountService premiumAccountService;
+
         @InjectMocks
         private ProjectServiceImpl projectService;
 
@@ -94,6 +103,9 @@ public class ProjectServiceImplTest {
         private ProjectMember ownerMemberInPublic;
         private ProjectMember ownerMemberInPrivate;
 
+        private ProjectInteraction pendingInPublic;
+        private ProjectInteraction pendingInPrivate;
+
         @BeforeEach
         void setUp() throws NoSuchFieldException, IllegalAccessException {
                 MockitoAnnotations.openMocks(this);
@@ -102,6 +114,11 @@ public class ProjectServiceImplTest {
                                 .getDeclaredField("maxProjectAmountAllowed");
                 maxProjectAmountAllowedField.setAccessible(true);
                 maxProjectAmountAllowedField.set(projectService, 5);
+
+                Field maxProjectAmountAllowedWithPremiumField = ProjectServiceImpl.class
+                                .getDeclaredField("maxProjectAmountAllowedWithPremium");
+                maxProjectAmountAllowedWithPremiumField.setAccessible(true);
+                maxProjectAmountAllowedWithPremiumField.set(projectService, 10);
 
                 //////////////
 
@@ -119,10 +136,11 @@ public class ProjectServiceImplTest {
                                 .role(Role.USER).build();
 
                 publicProject = Project.builder().id(1L)
-                                .config(ProjectConfiguration.builder().id(1L).isPublic(true).build())
+                                .config(ProjectConfiguration.builder().id(1L).maxParticipants(2).isPublic(true).build())
                                 .title("Public project").description("This is a public project").build();
                 privateProject = Project.builder().id(2L)
-                                .config(ProjectConfiguration.builder().id(2L).isPublic(false).build())
+                                .config(ProjectConfiguration.builder().id(2L).maxParticipants(2).isPublic(false)
+                                                .build())
                                 .title("Private project").description("This is a private  project").build();
 
                 ownerMemberInPublic = ProjectMember.builder().id(1L).project(publicProject).user(ownerUserInPublic)
@@ -130,11 +148,38 @@ public class ProjectServiceImplTest {
                 ownerMemberInPrivate = ProjectMember.builder().id(1L).project(privateProject).user(ownerUserInPrivate)
                                 .projectRole(ProjectMember.Role.OWNER).build();
 
+                pendingInPublic = ProjectInteraction.builder()
+                                .id(1L).user(pendingUserInPublic).project(publicProject)
+                                .status(ProjectInteraction.Status.PENDING).type(ProjectInteraction.Type.APPLICATION)
+                                .build();
+
+                pendingInPrivate = ProjectInteraction.builder()
+                                .id(2L).user(pendingUserInPrivate).project(privateProject)
+                                .status(ProjectInteraction.Status.PENDING).type(ProjectInteraction.Type.INVITATION)
+                                .build();
+
                 when(projectRepo.findById(publicProject.getId())).thenReturn(Optional.of(publicProject));
                 when(projectRepo.findById(privateProject.getId())).thenReturn(Optional.of(privateProject));
 
                 when(userRepo.findById(ownerUserInPublic.getId())).thenReturn(Optional.of(ownerUserInPublic));
                 when(userRepo.findById(ownerUserInPrivate.getId())).thenReturn(Optional.of(ownerUserInPrivate));
+                when(userRepo.findById(pendingUserInPrivate.getId())).thenReturn(Optional.of(pendingUserInPrivate));
+                when(userRepo.findById(pendingUserInPublic.getId())).thenReturn(Optional.of(pendingUserInPublic));
+
+                configureProjectMemberQueries();
+
+                when(interactionRepo.existsByUserIdAndProjectIdAndStatus(pendingUserInPublic.getId(),
+                                publicProject.getId(),
+                                ProjectInteraction.Status.PENDING)).thenReturn(true);
+                when(interactionRepo.existsByUserIdAndProjectIdAndStatus(pendingUserInPrivate.getId(),
+                                privateProject.getId(),
+                                ProjectInteraction.Status.PENDING)).thenReturn(true);
+
+                when(interactionRepo.findById(pendingInPublic.getId())).thenReturn(Optional.of(pendingInPublic));
+                when(interactionRepo.findById(pendingInPrivate.getId())).thenReturn(Optional.of(pendingInPrivate));
+        }
+
+        private void configureProjectMemberQueries() {
 
                 when(projectMemberRepo.findById(ownerMemberInPublic.getId()))
                                 .thenReturn(Optional.of(ownerMemberInPublic));
@@ -167,48 +212,152 @@ public class ProjectServiceImplTest {
                 when(projectMemberRepo.existsByUserIdAndProjectIdAndProjectRole(ownerUserInPublic.getId(),
                                 publicProject.getId(),
                                 ProjectMember.Role.OWNER)).thenReturn(true);
-
-                when(interactionRepo.existsByUserIdAndProjectIdAndStatus(pendingUserInPublic.getId(),
-                                publicProject.getId(),
-                                ProjectInteraction.Status.PENDING)).thenReturn(true);
-                when(interactionRepo.existsByUserIdAndProjectIdAndStatus(pendingUserInPrivate.getId(),
+                when(projectMemberRepo.existsByUserIdAndProjectIdAndProjectRole(ownerUserInPublic.getId(),
                                 privateProject.getId(),
-                                ProjectInteraction.Status.PENDING)).thenReturn(true);
+                                ProjectMember.Role.OWNER)).thenReturn(false);
+                when(projectMemberRepo.existsByUserIdAndProjectIdAndProjectRole(ownerUserInPrivate.getId(),
+                                publicProject.getId(),
+                                ProjectMember.Role.OWNER)).thenReturn(false);
+                when(projectMemberRepo.existsByUserIdAndProjectIdAndProjectRole(ownerUserInPrivate.getId(),
+                                privateProject.getId(),
+                                ProjectMember.Role.OWNER)).thenReturn(true);
+        }
+
+        @Test
+        void getProjectInfo_NonExistentProject_ThrowsException() {
+                Long loggedInUserId = ownerUserInPublic.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                InvalidInputException e = assertThrows(InvalidInputException.class,
+                                () -> projectService.getProjectInfo(1234L));
+                verify(projectRepo, times(1)).findById(1234L);
+                verify(projectMemberRepo, times(0)).existsByUserIdAndProjectId(ownerUserInPrivate.getId(),
+                                privateProject.getId());
+                verify(projectMemberRepo, times(0)).findByUserIdAndProjectId(ownerUserInPrivate.getId(),
+                                privateProject.getId());
         }
 
         @Test
         void getProjectInfo_NonMemberAndPrivateProject_ThrowsException() {
                 // Non-member tries to access a private project
-                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
+                Long loggedInUserId = ownerUserInPublic.getId();
+                Long privateProjectId = privateProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
 
-                assertThrows(ForbiddenException.class, () -> projectService.getProjectInfo(privateProject.getId()));
-                verify(projectRepo, times(1)).findById(privateProject.getId());
-                verify(projectMemberRepo, times(0)).existsByUserIdAndProjectId(ownerUserInPrivate.getId(),
-                                privateProject.getId());
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.getProjectInfo(privateProjectId));
+                assertEquals("You cannot see the private project's information unless you are a member.",
+                                e.getMessage());
+                verify(projectRepo, times(1)).findById(privateProjectId);
+                verify(projectMemberRepo, times(1)).existsByUserIdAndProjectId(loggedInUserId, privateProjectId);
+                verify(projectMemberRepo, times(0)).findByUserIdAndProjectId(loggedInUserId, privateProjectId);
         }
 
         @Test
         void getProjectInfo_MemberAndPrivateProject_ReturnsDto() {
                 // Member tries to access a private project
-                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPrivate.getId());
-                PublicProjectDto resultOkPrivate = projectService.getProjectInfo(privateProject.getId());
+                Long loggedInUserId = ownerUserInPrivate.getId();
+                Long privateProjectId = privateProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                PublicProjectDto resultOkPrivate = projectService.getProjectInfo(privateProjectId);
 
                 assertNotNull(resultOkPrivate, "The result should not be null");
+                assertEquals(privateProject.getId(), resultOkPrivate.getId());
+                assertEquals(privateProject.getTitle(), resultOkPrivate.getTitle());
+                assertEquals(privateProject.getDescription(), resultOkPrivate.getDescription());
+                assertEquals(loggedInUserId, resultOkPrivate.getOwner().getUserId());
+                assertEquals(false, resultOkPrivate.isHasPendingRequest());
+                assertEquals(ProjectMember.Role.OWNER, resultOkPrivate.getProjectRole());
+                assertEquals(ownerMemberInPrivate.getJoinDate(), resultOkPrivate.getMemberSince());
                 verify(projectRepo, times(1)).findById(privateProject.getId());
-                verify(projectMemberRepo, times(1)).existsByUserIdAndProjectId(ownerUserInPrivate.getId(),
+                verify(projectMemberRepo, times(1)).existsByUserIdAndProjectId(loggedInUserId,
                                 privateProject.getId());
+                verify(projectMemberRepo, times(1)).findByUserIdAndProjectId(loggedInUserId, privateProjectId);
+        }
+
+        @Test
+        void getProjectInfo_NonMemberAndPublicProject_ReturnsDto() {
+                Long loggedInUserId = ownerUserInPrivate.getId();
+                Long publicProjectId = publicProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                PublicProjectDto resultDto = projectService.getProjectInfo(publicProjectId);
+
+                assertNotNull(resultDto, "The result should not be null");
+                assertEquals(publicProject.getId(), resultDto.getId());
+                assertEquals(publicProject.getTitle(), resultDto.getTitle());
+                assertEquals(publicProject.getDescription(), resultDto.getDescription());
+                assertEquals(ownerMemberInPublic.getId(), resultDto.getOwner().getUserId());
+
+                assertEquals(false, resultDto.isHasPendingRequest());
+                assertEquals(null, resultDto.getProjectRole());
+                assertEquals(null, resultDto.getMemberSince());
+                verify(projectRepo, times(1)).findById(publicProject.getId());
+                verify(projectMemberRepo, times(0)).existsByUserIdAndProjectId(loggedInUserId,
+                                publicProject.getId());
+                verify(projectMemberRepo, times(1)).findByUserIdAndProjectId(loggedInUserId, publicProjectId);
         }
 
         @Test
         void getProjectInfo_MemberAndPublicProject_ReturnsDto() {
-                // Member tries to access a public project
-                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
-                PublicProjectDto resultOkPublic = projectService.getProjectInfo(publicProject.getId());
+                Long loggedInUserId = ownerMemberInPublic.getId();
+                Long publicProjectId = publicProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                PublicProjectDto resultDto = projectService.getProjectInfo(publicProjectId);
 
-                assertNotNull(resultOkPublic, "The result should not be null");
+                assertEquals(false, resultDto.isHasPendingRequest());
+                assertEquals(ProjectMember.Role.OWNER, resultDto.getProjectRole());
+                assertEquals(ownerMemberInPublic.getJoinDate(), resultDto.getMemberSince());
                 verify(projectRepo, times(1)).findById(publicProject.getId());
-                verify(projectMemberRepo, times(0)).existsByUserIdAndProjectId(ownerUserInPublic.getId(),
+                verify(projectMemberRepo, times(0)).existsByUserIdAndProjectId(loggedInUserId,
                                 publicProject.getId());
+                verify(projectMemberRepo, times(1)).findByUserIdAndProjectId(loggedInUserId, publicProjectId);
+        }
+
+        @Test
+        void getProjectInfo_NotMemberButHasPendingInteractionAndPublicProject_ReturnsDto() {
+                Long loggedInUserId = pendingUserInPublic.getId();
+                Long projectid = publicProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                PublicProjectDto resultDto = projectService.getProjectInfo(projectid);
+
+                assertEquals(true, resultDto.isHasPendingRequest());
+                assertEquals(null, resultDto.getProjectRole());
+                assertEquals(null, resultDto.getMemberSince());
+                verify(projectRepo, times(1)).findById(publicProject.getId());
+                verify(projectMemberRepo, times(0)).existsByUserIdAndProjectId(loggedInUserId,
+                                publicProject.getId());
+                verify(projectMemberRepo, times(1)).findByUserIdAndProjectId(loggedInUserId, projectid);
+        }
+
+        @Test
+        void getOwnerProjectInfo_NotOwner_ThrowsException() {
+                Long loggedInUserId = ownerUserInPrivate.getId();
+                Long projectId = publicProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.getOwnerProjectInfo(projectId));
+                assertEquals("You are not the owner and cannot perform this action.", e.getMessage());
+        }
+
+        @Test
+        void getOwnerProjectInfo_InvalidProject_ThrowsException() {
+                Long loggedInUserId = ownerUserInPrivate.getId();
+                Long projectId = 1234L;
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.getOwnerProjectInfo(projectId));
+        }
+
+        @Test
+        void getOwnerProjectInfo_IsOwner_ReturnsDto() {
+                Long loggedInUserId = ownerUserInPublic.getId();
+                Long projectId = publicProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                ProjectConfigDto result = projectService.getOwnerProjectInfo(projectId);
+                assertNotNull(result, "The result should not be null");
+                assertEquals(publicProject.getConfig().getId(), result.getConfigId());
+                assertEquals(publicProject.getId(), result.getProjectId());
+                assertEquals(true, result.getIsPublic());
         }
 
         @Test
@@ -238,8 +387,9 @@ public class ProjectServiceImplTest {
         @Test
         void getPublicProjects_Valid_ReturnsDto() {
                 Page<Project> projectPage = new PageImpl<>(Collections.singletonList(publicProject));
-                when(projectRepo.findAllByConfigIsPublicTrue(any(Pageable.class))).thenReturn(projectPage);
                 when(projectRepo.countAllByConfigIsPublicTrue()).thenReturn(1L);
+                when(projectRepo.findAllByConfigIsPublicTrue(any(Pageable.class))).thenReturn(projectPage);
+
                 when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
 
                 Page<PublicProjectDto> result = projectService.getPublicProjects(1, 5, "title", "asc");
@@ -285,8 +435,9 @@ public class ProjectServiceImplTest {
                 Long loggedInUserId = ownerMemberInPublic.getId();
                 Long privateProjectId = privateProject.getId();
                 when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
-                assertThrows(ForbiddenException.class,
+                ForbiddenException e = assertThrows(ForbiddenException.class,
                                 () -> projectService.getProjectMembers(privateProjectId, 1, 10, "asc"));
+                assertEquals("Only members of the project can perform this action", e.getMessage());
                 verify(projectMemberRepo, times(1)).existsByUserIdAndProjectId(ownerMemberInPublic.getId(),
                                 privateProjectId);
         }
@@ -335,23 +486,41 @@ public class ProjectServiceImplTest {
         }
 
         @Test
-        void createNewProject_MaxLimitExceeded_ThrowsException() {
+        void createNewProject_MaxLimitExceeded_WithoutPremium_ThrowsException() {
                 Long loggedInUserId = ownerUserInPublic.getId();
                 AcceptProjectDto dto = new AcceptProjectDto("New Project", "Description of the project", true, 10);
 
                 when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(premiumAccountService.userHasActivePremiumAccount(loggedInUserId)).thenReturn(false);
                 when(projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId, ProjectMember.Role.OWNER))
-                                .thenReturn(10L);
-
-                assertThrows(MaxProjectOwnerLimitExceededException.class, () -> projectService.createNewProject(dto));
-
+                                .thenReturn(6L);
+                MaxProjectOwnerLimitExceededException e = assertThrows(MaxProjectOwnerLimitExceededException.class,
+                                () -> projectService.createNewProject(dto));
+                assertEquals("Without premium account you can own up to 5 projects only!", e.getMessage());
                 verify(projectRepo, times(0)).save(any(Project.class));
                 verify(configRepo, times(0)).save(any(ProjectConfiguration.class));
                 verify(projectMemberRepo, times(0)).save(any(ProjectMember.class));
         }
 
         @Test
-        void createNewProject_Success_ReturnsDto() {
+        void createNewProject_MaxLimitExceeded_WithPremium_ThrowsException() {
+                Long loggedInUserId = ownerUserInPublic.getId();
+                AcceptProjectDto dto = new AcceptProjectDto("New Project", "Description of the project", true, 10);
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(premiumAccountService.userHasActivePremiumAccount(loggedInUserId)).thenReturn(true);
+                when(projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId, ProjectMember.Role.OWNER))
+                                .thenReturn(11L);
+                MaxProjectOwnerLimitExceededException e = assertThrows(MaxProjectOwnerLimitExceededException.class,
+                                () -> projectService.createNewProject(dto));
+                assertEquals("You have already reached your 10 accounts per premium account limit.", e.getMessage());
+                verify(projectRepo, times(0)).save(any(Project.class));
+                verify(configRepo, times(0)).save(any(ProjectConfiguration.class));
+                verify(projectMemberRepo, times(0)).save(any(ProjectMember.class));
+        }
+
+        @Test
+        void createNewProject_Success_WithoutPremium_ReturnsDto() {
                 Long loggedInUserId = ownerUserInPublic.getId();
                 String title = "New Project";
                 String description = "This is a new description";
@@ -365,6 +534,7 @@ public class ProjectServiceImplTest {
                                 .maxParticipants(maxParticipants).build();
 
                 when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(premiumAccountService.userHasActivePremiumAccount(loggedInUserId)).thenReturn(false);
                 when(projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId, ProjectMember.Role.OWNER))
                                 .thenReturn(0L);
 
@@ -396,6 +566,40 @@ public class ProjectServiceImplTest {
                 verify(projectRepo, times(1)).save(any(Project.class));
                 verify(configRepo, times(1)).save(any(ProjectConfiguration.class));
                 verify(projectMemberRepo, times(1)).save(any(ProjectMember.class));
+        }
+
+        @Test
+        void createNewProject_Success_WithPremium_ReturnsDto() {
+                Long loggedInUserId = ownerUserInPublic.getId();
+                String title = "New Project";
+                String description = "This is a new description";
+                Boolean isPublic = true;
+                Integer maxParticipants = 10;
+
+                AcceptProjectDto dto = AcceptProjectDto.builder()
+                                .title(title)
+                                .description(description)
+                                .isPublic(isPublic)
+                                .maxParticipants(maxParticipants).build();
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(premiumAccountService.userHasActivePremiumAccount(loggedInUserId)).thenReturn(true);
+                when(projectMemberRepo.countAllByUserIdAndProjectRole(loggedInUserId, ProjectMember.Role.OWNER))
+                                .thenReturn(9L);
+
+                Project newProject = Project.builder().id(1L).title(title).description(description).build();
+                ProjectConfiguration config = ProjectConfiguration.builder().id(1L).isPublic(isPublic)
+                                .maxParticipants(maxParticipants).build();
+                ProjectMember owner = ProjectMember.builder().user(ownerUserInPublic).project(newProject)
+                                .projectRole(ProjectMember.Role.OWNER).build();
+
+                when(projectRepo.save(any(Project.class))).thenReturn(newProject);
+                when(configRepo.save(any(ProjectConfiguration.class))).thenReturn(config);
+                when(projectMemberRepo.save(any(ProjectMember.class))).thenReturn(owner);
+
+                BasicNestedResponseDto<ProjectDto> result = projectService.createNewProject(dto);
+
+                assertNotNull(result, "Result should not be null");
         }
 
         @Test
@@ -466,7 +670,7 @@ public class ProjectServiceImplTest {
 
         @Test
         void deleteProject_Valid() {
-                Long projectId = 1L;
+                Long projectId = publicProject.getId();
 
                 when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
                 when(projectMemberRepo.findUsersByProjectId(projectId))
@@ -481,6 +685,99 @@ public class ProjectServiceImplTest {
                 assertEquals("Project has been succesfully deleted", result.getMessage());
 
                 verify(projectRepo, times(1)).deleteById(projectId);
+                verify(notificationRepo, times(1)).save(any(Notification.class));
+        }
+
+        @Test
+        void makeProjectApplication_ApplicationToPrivateProject_ThrowsException() {
+                Long projectId = privateProject.getId();
+                when(projectRepo.existsByIdAndConfigIsPublicTrue(projectId)).thenReturn(false);
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.makeProjectApplication(projectId));
+                assertEquals("Users are not allowed to send applications to private projects.", e.getMessage());
+        }
+
+        @Test
+        void makeProjectApplication_ApplicationWhenAlreadyMember_ThrowsException() {
+                Long projectId = publicProject.getId();
+                when(projectRepo.existsByIdAndConfigIsPublicTrue(projectId)).thenReturn(true);
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
+                UserAlreadyMemberException e = assertThrows(UserAlreadyMemberException.class,
+                                () -> projectService.makeProjectApplication(projectId));
+                assertEquals("You are already a member of this project.", e.getMessage());
+        }
+
+        @Test
+        void makeProjectApplication_ApplicationWhenAlreadyPending_ThrowsException() {
+                Long projectId = publicProject.getId();
+                when(projectRepo.existsByIdAndConfigIsPublicTrue(projectId)).thenReturn(true);
+                when(userService.getLoggedInUserId()).thenReturn(pendingUserInPublic.getId());
+
+                AlreadyExistsException e = assertThrows(AlreadyExistsException.class,
+                                () -> projectService.makeProjectApplication(projectId));
+                assertEquals("You already have a pending invitiation / application.", e.getMessage());
+        }
+
+        @Test
+        void makeProjectApplication_Valid_ReturnsDto() {
+                Long projectId = publicProject.getId();
+                Long loggedInUserId = ownerUserInPrivate.getId();
+                when(projectRepo.existsByIdAndConfigIsPublicTrue(projectId)).thenReturn(true);
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(interactionRepo.existsByUserIdAndProjectIdAndStatus(loggedInUserId, projectId,
+                                ProjectInteraction.Status.PENDING)).thenReturn(false);
+                BasicMessageDto result = projectService.makeProjectApplication(projectId);
+                assertNotNull(result);
+                verify(interactionRepo, times(1)).save(any(ProjectInteraction.class));
+                verify(notificationRepo, times(1)).save(any(Notification.class));
+                assertEquals("Project application has been succesfully sent.", result.getMessage());
+        }
+
+        @Test
+        void makeProjectInvitation_NotOwner_ThrowsError() {
+                Long projectId = publicProject.getId();
+                Long loggedInUserId = ownerUserInPrivate.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.makeProjectInvitation(projectId, null));
+                assertEquals("You are not the owner and cannot perform this action.", e.getMessage());
+        }
+
+        @Test
+        void makeProjectInvitation_MaxParticipantsLimit_ThrowsError() {
+                Long projectId = publicProject.getId();
+                Long loggedInUserId = ownerUserInPublic.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                ProjectConfiguration config = ProjectConfiguration.builder().maxParticipants(1).build();
+                Project project = Project.builder().config(config).members(List.of(ProjectMember.builder().build()))
+                                .build();
+
+                when(projectRepo.findById(projectId)).thenReturn(Optional.of(project));
+
+                MaxParticipantsReachedException e = assertThrows(MaxParticipantsReachedException.class,
+                                () -> projectService.makeProjectInvitation(projectId, null));
+                assertEquals("Cannot add more participants. Maximum limit reached.", e.getMessage());
+        }
+
+        @Test
+        void makeProjectInvitation_Valid_ReturnsDto() {
+                Long projectId = publicProject.getId();
+                Long loggedInUserId = ownerUserInPublic.getId();
+                InvitationDto dto = new InvitationDto("user1@test.com");
+                User newUser = User.builder().id(123L).build();
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                when(userRepo.findUserByEmail(dto.getEmail())).thenReturn(Optional.of(newUser));
+                when(projectMemberRepo.existsByUserIdAndProjectId(newUser.getId(), projectId)).thenReturn(false);
+                when(interactionRepo.existsByUserIdAndProjectIdAndStatus(newUser.getId(), projectId,
+                                ProjectInteraction.Status.PENDING)).thenReturn(false);
+
+                BasicMessageDto result = projectService.makeProjectInvitation(projectId, dto);
+
+                assertNotNull(result);
+                assertEquals("Project invitation has been succesfully sent.", result.getMessage());
+                verify(interactionRepo, times(1)).save(any(ProjectInteraction.class));
                 verify(notificationRepo, times(1)).save(any(Notification.class));
         }
 
@@ -601,6 +898,230 @@ public class ProjectServiceImplTest {
                 verify(interactionRepo, times(1)).findAllByProjectIdAndTypeAndStatus(projectId,
                                 ProjectInteraction.Type.INVITATION,
                                 ProjectInteraction.Status.PENDING);
+        }
+
+        @Test
+        void acceptApplication_InvitationIsPassedIn_ThrowsException() {
+                Long applicationid = pendingInPrivate.getId();
+                InvalidInteractionException e = assertThrows(InvalidInteractionException.class,
+                                () -> projectService.acceptApplication(applicationid));
+                assertEquals("This interaction is not an application.", e.getMessage());
+        }
+
+        @Test
+        void acceptApplication_Valid_ReturnsDto() {
+                Long applicationid = pendingInPublic.getId();
+                Long loggedInUserId = ownerUserInPublic.getId();
+
+                when(projectMemberRepo.existsByUserIdAndProjectId(pendingInPublic.getUser().getId(),
+                                pendingInPublic.getProject().getId())).thenReturn(false);
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                BasicMessageDto result = projectService.acceptApplication(applicationid);
+                assertNotNull(result);
+                assertEquals("User application to join the project has been accepted", result.getMessage());
+
+                verify(interactionRepo, times(1)).save(any(ProjectInteraction.class));
+                verify(projectMemberRepo, times(1)).save(any(ProjectMember.class));
+                verify(notificationRepo, times(1)).save(any(Notification.class));
+        }
+
+        @Test
+        void declineApplication_NotOwner_ThrowsException() {
+                Long applicationid = pendingInPublic.getId();
+                Long loggedInUserId = ownerUserInPrivate.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                assertThrows(ForbiddenException.class, () -> projectService.declineApplication(applicationid));
+        }
+
+        @Test
+        void declineApplication_Valid_ReturnsDto() {
+                Long applicationid = pendingInPublic.getId();
+                Long loggedInUserId = ownerUserInPublic.getId();
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                BasicMessageDto result = projectService.declineApplication(applicationid);
+
+                assertNotNull(result);
+                assertEquals("User application to join the project has been declined", result.getMessage());
+                assertEquals(pendingInPublic.getStatus(), ProjectInteraction.Status.DECLINED);
+
+                verify(interactionRepo, times(1)).save(any(ProjectInteraction.class));
+                verify(projectMemberRepo, times(0)).save(any(ProjectMember.class));
+                verify(notificationRepo, times(1)).save(any(Notification.class));
+        }
+
+        @Test
+        void acceptInvitation_OtherUser_ThrowsException() {
+                Long invitationId = pendingInPrivate.getId();
+                Long loggedInUserId = pendingUserInPublic.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.acceptInvitation(invitationId));
+                assertEquals("Users are not allowed to manage other user's invitations", e.getMessage());
+        }
+
+        @Test
+        void acceptInvitation_Valid_ReturnsDto() {
+                Long invitationId = pendingInPrivate.getId();
+                Long loggedInUserId = pendingUserInPrivate.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                BasicMessageDto result = projectService.acceptInvitation(invitationId);
+                assertNotNull(result);
+                assertEquals("Project invitation has succefully been accepted.", result.getMessage());
+                assertEquals(pendingInPrivate.getStatus(), ProjectInteraction.Status.ACCEPTED);
+
+                verify(interactionRepo, times(1)).save(any(ProjectInteraction.class));
+                verify(projectMemberRepo, times(1)).save(any(ProjectMember.class));
+                verify(notificationRepo, times(1)).save(any(Notification.class));
+        }
+
+        @Test
+        void declineInvitation_OtherUser_ThrowsException() {
+                Long invitationId = pendingInPrivate.getId();
+                Long loggedInUserId = pendingUserInPublic.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.declineInvitation(invitationId));
+                assertEquals("Users are not allowed to manage other user's invitations", e.getMessage());
+        }
+
+        @Test
+        void declinenvitation_Valid_ReturnsDto() {
+                Long invitationId = pendingInPrivate.getId();
+                Long loggedInUserId = pendingUserInPrivate.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                BasicMessageDto result = projectService.declineInvitation(invitationId);
+                assertNotNull(result);
+                assertEquals("Project invitation has succefully been declined.", result.getMessage());
+                assertEquals(pendingInPrivate.getStatus(), ProjectInteraction.Status.DECLINED);
+
+                verify(interactionRepo, times(1)).save(any(ProjectInteraction.class));
+                verify(projectMemberRepo, times(0)).save(any(ProjectMember.class));
+                verify(notificationRepo, times(1)).save(any(Notification.class));
+        }
+
+        @Test
+        void cancelApplication_WrongUser_ThrowsException() {
+                Long applicationId = pendingInPublic.getId();
+                Long loggedInUserId = pendingInPrivate.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.cancelApplication(applicationId));
+                assertEquals("Users are not allowed to manage other user's applications", e.getMessage());
+        }
+
+        @Test
+        void cancelApplication_Valid_ReturnsDto() {
+                Long applicationId = pendingInPublic.getId();
+                Long loggedInUserId = pendingUserInPublic.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                BasicMessageDto result = projectService.cancelApplication(applicationId);
+                assertNotNull(result);
+                assertEquals("Project application has succefully been canceled.", result.getMessage());
+
+                verify(interactionRepo, times(1)).delete(any(ProjectInteraction.class));
+        }
+
+        @Test
+        void cancelInvitation_NotOwner_ThrowsException() {
+                Long invitationid = pendingInPrivate.getId();
+                Long loggedInUserId = ownerMemberInPublic.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.cancelInvitation(invitationid));
+                assertEquals("You are not the owner and cannot perform this action.", e.getMessage());
+        }
+
+        @Test
+        void cancelInvitation_Valid_ReturnsDto() {
+                Long invitationid = pendingInPrivate.getId();
+                Long loggedInUserId = ownerUserInPrivate.getId();
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                BasicMessageDto result = projectService.cancelInvitation(invitationid);
+                assertNotNull(result);
+                assertEquals("Project invitation has been succefully canceled.", result.getMessage());
+
+                verify(interactionRepo, times(1)).delete(any(ProjectInteraction.class));
+        }
+
+        @Test
+        void kickMemberOut_TryToKickOwner_ThrowsException() {
+                Long projectMemberId = ownerMemberInPublic.getId();
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.kickMemberOut(projectMemberId));
+                assertEquals("It is imposiible to kick the owner of the project out.", e.getMessage());
+
+        }
+
+        @Test
+        void kickMemberOut_NotOwnerTryingToCallEndpoint_ThrowsException() {
+                Long projectMemberId = 2L;
+                Long loggedInUserId = ownerUserInPrivate.getId();
+
+                when(projectMemberRepo.findById(projectMemberId))
+                                .thenReturn(Optional.of(ProjectMember.builder().project(publicProject).build()));
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.kickMemberOut(projectMemberId));
+                assertEquals("You are not the owner and cannot perform this action.", e.getMessage());
+        }
+
+        @Test
+        void kickMemberOut_Valid_ReturnsDto() {
+                Long projectMemberId = 2L;
+                Long loggedInUserId = ownerUserInPublic.getId();
+
+                when(projectMemberRepo.findById(projectMemberId))
+                                .thenReturn(Optional.of(ProjectMember.builder().project(publicProject).build()));
+
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                BasicMessageDto result = projectService.kickMemberOut(projectMemberId);
+                assertNotNull(result);
+                assertEquals("Project member has been successfully excluded from the project.", result.getMessage());
+
+                verify(projectMemberRepo, times(1)).deleteById(projectMemberId);
+                verify(notificationRepo, times(1)).save(any(Notification.class));
+        }
+
+        @Test
+        void leaveProject_OwnerTriesToLeave_ThrowsException() {
+                Long projectId = publicProject.getId();
+                when(userService.getLoggedInUserId()).thenReturn(ownerUserInPublic.getId());
+
+                ForbiddenException e = assertThrows(ForbiddenException.class,
+                                () -> projectService.leaveProject(projectId));
+                assertEquals("Owner cannot leave the project. Consider deleting it.", e.getMessage());
+        }
+
+        @Test
+        void leaveProject_Valid_ReturnsDto() {
+                Long projectId = publicProject.getId();
+
+                User anotherUserInTheProject = User.builder().id(312L).firstName("For").lastName("Test").build();
+                Long loggedInUserId = ownerMemberInPublic.getId();
+
+                when(projectMemberRepo.findByUserIdAndProjectId(loggedInUserId, publicProject.getId()))
+                                .thenReturn(Optional.of(ProjectMember.builder().project(publicProject)
+                                                .user(anotherUserInTheProject).build()));
+                when(userService.getLoggedInUserId()).thenReturn(loggedInUserId);
+
+                BasicMessageDto result = projectService.leaveProject(projectId);
+                assertNotNull(result);
+                assertEquals("You have succesfully left the project.", result.getMessage());
+
+                verify(projectMemberRepo, times(1)).delete(any(ProjectMember.class));
+                verify(notificationRepo, times(1)).save(any(Notification.class));
         }
 
         private ProjectInteraction createInteraction(User user, Project project) {
