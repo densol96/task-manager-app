@@ -5,6 +5,7 @@ import com.accenture.backend.entity.User;
 import com.accenture.backend.enums.Role;
 import com.accenture.backend.entity.Project;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -68,6 +69,13 @@ public class ProjectInteractionRepositoryTest {
                                 .build();
 
                 interactionRepo.saveAll(Arrays.asList(interaction1, interaction2, interaction3));
+        }
+
+        @AfterEach
+        void tearDown() {
+                interactionRepo.deleteAll();
+                projectRepo.deleteAll();
+                userRepo.deleteAll();
         }
 
         @Test
