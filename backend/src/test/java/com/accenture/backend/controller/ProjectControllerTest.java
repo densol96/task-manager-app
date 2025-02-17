@@ -1,6 +1,5 @@
-package com.accenture.backend.controllers;
+package com.accenture.backend.controller;
 
-import com.accenture.backend.controller.ProjectController;
 import com.accenture.backend.dto.request.AcceptProjectDto;
 import com.accenture.backend.dto.request.InvitationDto;
 import com.accenture.backend.dto.response.*;

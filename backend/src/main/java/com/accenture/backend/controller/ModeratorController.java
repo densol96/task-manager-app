@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.util.List;
 
 @Slf4j
@@ -75,7 +76,7 @@ public class ModeratorController {
                     "The exact behavior depends on the front-end implementation."
     )
     @GetMapping("/{reportId}")
-    public ReportInfoDto getReportDetail(@PathVariable long reportId) {
+    public ReportInfoDto getReportDetail(@PathVariable long reportId) throws IOException {
         log.info("getting details about moderator who reviewing report {}", reportId);
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         long moderatorId = userService.getUserIdByEmail(email);

@@ -54,14 +54,14 @@ public class SecurityConfig {
                                                 .hasRole("NOT_CONFIRMED")
                                                 .requestMatchers("/api/v1/user/**", "/api/v1/projects/**",
                                                                 "/api/v1/tasks/**", "/api/v1/notifications/**",
-                                                                "/api/v1/payments/create-checkout-session")
+                                                                "/api/v1/payments/create-checkout-session", "/api/v1/report")
                                                 .hasRole("USER")
                                                 .requestMatchers("/api/v1/admin-dashboard/**").hasRole("ADMIN")
                                                 .requestMatchers("/api/v1/moderator-dashboard/**").hasRole("MODERATOR")
                                                 .anyRequest()
                                                 .denyAll())
-                                .oauth2Login(oauth2 -> oauth2
-                                                .successHandler(oauth2Service::handleOAuth2Success))
+//                                .oauth2Login(oauth2 -> oauth2
+//                                                .successHandler(oauth2Service::handleOAuth2Success))
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
