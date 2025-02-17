@@ -19,7 +19,8 @@ import java.util.stream.Collectors;
 public class TaskWithAssigneesDto extends TaskDto {
     private Set<MemberTaskAssignmentDto> assignees;
 
-    public TaskWithAssigneesDto(Long id, String title, String description, TaskStatus status, TaskPriority priority, LocalDateTime deadline, Long projectId, Set<MemberTaskAssignmentDto> assignees) {
+    public TaskWithAssigneesDto(Long id, String title, String description, TaskStatus status, TaskPriority priority,
+            LocalDateTime deadline, Long projectId, Set<MemberTaskAssignmentDto> assignees) {
         super(id, title, description, status, priority, deadline, projectId);
         this.assignees = assignees;
     }
@@ -35,7 +36,6 @@ public class TaskWithAssigneesDto extends TaskDto {
                 task.getProject().getId(),
                 task.getMemberAssignments().stream()
                         .map(MemberTaskAssignmentDto::fromEntity)
-                        .collect(Collectors.toSet())
-        );
+                        .collect(Collectors.toSet()));
     }
 }

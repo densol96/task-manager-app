@@ -1,6 +1,5 @@
 package com.accenture.backend.config.security;
 
-import com.accenture.backend.service.OAuth2Service;
 import com.accenture.backend.util.JwtAuthenticationFilter;
 import lombok.AllArgsConstructor;
 
@@ -8,7 +7,6 @@ import java.util.Arrays;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -23,7 +21,6 @@ import org.springframework.web.cors.CorsConfiguration;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
-        private final OAuth2Service oauth2Service;
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -31,7 +28,8 @@ public class SecurityConfig {
                                 .cors(cors -> cors.configurationSource(request -> {
                                         CorsConfiguration config = new CorsConfiguration();
                                         config.setAllowedOrigins(
-                                                        Arrays.asList("http://localhost:3000"));
+                                                        Arrays.asList("http://localhost:3000",
+                                                                        "http://taskify-bootcamp-accenture.s3-website.eu-north-1.amazonaws.com"));
 
                                         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE",
                                                         "OPTIONS"));
@@ -41,8 +39,7 @@ public class SecurityConfig {
                                 }))
                                 .authorizeHttpRequests(authorize -> authorize
                                                 .requestMatchers("/api/v1/login/**", "/api/v1/sign-up/**",
-                                                                "/api/v1/oauth2/**",
-                                                                "/api/v1/payments/webhook",
+                                                                "/login/oauth2/code/google", "/api/v1/payments/webhook",
                                                                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                                                 .permitAll()
                                                 .requestMatchers("/api/v1/identity/**")
@@ -56,8 +53,6 @@ public class SecurityConfig {
                                                 .hasRole("USER")
                                                 .anyRequest()
                                                 .denyAll())
-                                .oauth2Login(oauth2 -> oauth2
-                                                .successHandler(oauth2Service::handleOAuth2Success))
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

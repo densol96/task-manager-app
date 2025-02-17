@@ -1,9 +1,8 @@
 import axios from "axios";
 import toast from "react-hot-toast";
-import { errorParser } from "../../helpers/functions";
+import { getJWT } from "../../helpers/functions";
 
 const API_URL = process.env.REACT_APP_API_URL;
-const getJWT = () => JSON.parse(localStorage.getItem("jwt"));
 
 export async function getAll(page, size, sortDirection, sortBy) {
   const API_ENDPOINT = `${API_URL}/projects/public?page=${page}&size=${size}&sortDirection=${sortDirection}&sortBy=${sortBy}`;

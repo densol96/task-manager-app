@@ -6,12 +6,14 @@ const StyledLogoWrapper = styled.div`
 `;
 
 const StyledLogo = styled.img`
-  width: ${({ size }) => (size === "mini" ? "15rem" : "20rem")};
+  width: ${({ size }) => (size === "mini" ? "25rem" : "40rem")};
   border-radius: 50%;
-  filter: blur(2px);
+  /* filter: blur(2px); */
   display: block;
 `;
 
-const Logo = ({ size }) => <StyledLogo size={size} src="/lg.jpg" alt="Logo" />;
+const Logo = ({ size = "mini" }) => (
+  <StyledLogo size={size} src="/1.svg" alt="Logo" />
+);
 
 export default Logo;

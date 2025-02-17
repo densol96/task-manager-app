@@ -61,8 +61,12 @@ public class PaymentServiceImpl implements PaymentService {
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl(frontendUrl + "/payments/success?session_id={CHECKOUT_SESSION_ID}")
-                .setCancelUrl(frontendUrl + "/payments/cancel")
+                // wil not work for an S£ static hoisting
+                // .setSuccessUrl(frontendUrl +
+                // "/payments/success?session_id={CHECKOUT_SESSION_ID}")
+                // .setCancelUrl(frontendUrl + "/payments/cancel")
+                .setSuccessUrl(frontendUrl)
+                .setCancelUrl(frontendUrl)
                 .addLineItem(
                         SessionCreateParams.LineItem.builder()
                                 .setQuantity(1L)

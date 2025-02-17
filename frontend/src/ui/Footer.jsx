@@ -18,8 +18,9 @@ const Footer = () => {
         Created by <br />
         Deniss Solovjovs, <br />
         Nazar Bondarenko, <br />
-        Nina Yushenko, <br />
-        Olena Boiko.
+        Nina Yushchenko, <br />
+        Olena Boiko, <br />
+        Oleksand Pohorielov
       </p>
     </StyledFooter>
   );

@@ -26,10 +26,10 @@ import java.util.List;
 
 @Data
 @Entity
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "users")
+@Builder
 public class User {
 
     @Id
@@ -45,7 +45,7 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    private Role role;
+    private Role role = Role.NOT_CONFIRMED;
 
     private AuthProvider authProvider = AuthProvider.LOCAL;
 

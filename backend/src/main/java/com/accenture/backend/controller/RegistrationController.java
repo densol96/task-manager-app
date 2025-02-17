@@ -21,7 +21,7 @@ public class RegistrationController {
     public ResponseEntity<?> createUser(@Valid @RequestBody UserInfoDto userInfo) {
         userService.createUser(userInfo);
 
-        return ResponseEntity.ok("User created");
+        return ResponseEntity.ok("User created. Make sure to verify the email so you can see and create projects.");
     }
 
 }

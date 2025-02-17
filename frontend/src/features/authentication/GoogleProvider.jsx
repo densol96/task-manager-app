@@ -1,37 +1,41 @@
-import { SiGmail } from "react-icons/si";
-import Button from "../../ui/Button";
 import styled from "styled-components";
+import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
+import { useAuthContext } from "../../context/AuthContext";
+import toast from "react-hot-toast";
 
-const googleAuthUrl =
-  `https://accounts.google.com/o/oauth2/v2/auth?` +
-  `scope=email%20profile&` +
-  `access_type=offline&` +
-  `response_type=code&` +
-  `redirect_uri=${process.env.REACT_APP_BACKEND_DOMAIN}/login/oauth2/code/google&` +
-  `client_id=${process.env.REACT_APP_GOOGLE_CLIENT_ID}`;
+function GoogleProvider() {
+  const { updateJwt } = useAuthContext();
 
-const A = styled.a`
-  display: flex;
-  width: 100%;
+  const handleSuccess = async (response) => {
+    const oauthToken = response.credential;
 
-  button {
-    width: 100%;
-    padding: 1.6rem;
+    try {
+      const res = await fetch(
+        `${process.env.REACT_APP_BACKEND_DOMAIN}/login/oauth2/code/google`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ oauthToken }),
+        }
+      );
 
-    svg {
-      margin-right: 1rem;
+      const data = await res.json();
+      updateJwt(data.jwt);
+    } catch (error) {
+      handleFailure();
     }
-  }
-`;
+  };
 
-function GoogleProvider({ type }) {
+  const handleFailure = (error) => {
+    toast.error("Service is currently unavailable!");
+  };
+
   return (
-    <A href={googleAuthUrl}>
-      <Button type="button" variation="danger">
-        <SiGmail />
-        {type === "sign-in" ? "Sign In" : "Sign Up"} With Google Account
-      </Button>
-    </A>
+    <GoogleOAuthProvider clientId="188573725163-gnurb7ro09b9q4dsl9o6so0umkb231jc.apps.googleusercontent.com">
+      <GoogleLogin onSuccess={handleSuccess} onError={handleFailure} />
+    </GoogleOAuthProvider>
   );
 }
 

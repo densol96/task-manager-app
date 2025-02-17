@@ -62,7 +62,8 @@ public class TaskController {
     }
 
     @GetMapping("/projects/{projectId}/status/{status}")
-    public ResponseEntity<List<TaskDto>> getTasksByProjectAndStatus(@PathVariable Long projectId, @PathVariable String status) {
+    public ResponseEntity<List<TaskDto>> getTasksByProjectAndStatus(@PathVariable Long projectId,
+            @PathVariable String status) {
         List<TaskDto> tasks = taskService.getTasksByProjectAndStatus(projectId, status);
         return ResponseEntity.ok(tasks);
     }
@@ -82,7 +83,8 @@ public class TaskController {
 
     // Updates a label, that was added to some task (by addLabelToTask)
     @PutMapping("/labels/{labelId}")
-    public ResponseEntity<TaskLabelDto> updateLabel(@PathVariable Long labelId, @RequestBody TaskLabelDto taskLabelDto) {
+    public ResponseEntity<TaskLabelDto> updateLabel(@PathVariable Long labelId,
+            @RequestBody TaskLabelDto taskLabelDto) {
         TaskLabelDto updatedLabel = taskService.updateLabel(labelId, taskLabelDto);
         return updatedLabel != null ? ResponseEntity.ok(updatedLabel) : ResponseEntity.notFound().build();
     }
@@ -100,11 +102,11 @@ public class TaskController {
     }
 
     @DeleteMapping("/{taskId}/labels/deleteFromTask/{labelId}")
-    public ResponseEntity<TaskWithLabelsDto> removeLabelFromTask(@PathVariable Long taskId, @PathVariable Long labelId) {
+    public ResponseEntity<TaskWithLabelsDto> removeLabelFromTask(@PathVariable Long taskId,
+            @PathVariable Long labelId) {
         TaskWithLabelsDto updatedTask = taskService.removeLabelFromTask(taskId, labelId);
         return ResponseEntity.ok(updatedTask);
     }
-
 
     @GetMapping("/{taskId}/labels")
     public ResponseEntity<List<TaskLabelDto>> getLabelsForTask(@PathVariable Long taskId) {
@@ -122,7 +124,8 @@ public class TaskController {
     }
 
     @PostMapping("/{taskId}/messages/add")
-    public ResponseEntity<TaskDiscussionMessageDto> addMessageToTask(@PathVariable Long taskId, @RequestBody TaskDiscussionMessageDto messageDto) {
+    public ResponseEntity<TaskDiscussionMessageDto> addMessageToTask(@PathVariable Long taskId,
+            @RequestBody TaskDiscussionMessageDto messageDto) {
         TaskDiscussionMessageDto createdMessage = taskService.addMessageToTask(taskId, messageDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdMessage);
     }
@@ -140,7 +143,8 @@ public class TaskController {
     }
 
     @PostMapping("/{taskId}/assign/{memberId}")
-    public ResponseEntity<TaskWithAssigneesDto> assignMemberToTask(@PathVariable Long taskId, @PathVariable Long memberId) {
+    public ResponseEntity<TaskWithAssigneesDto> assignMemberToTask(@PathVariable Long taskId,
+            @PathVariable Long memberId) {
         TaskWithAssigneesDto updatedTask = taskService.assignMemberToTask(taskId, memberId);
         return ResponseEntity.ok(updatedTask);
     }
