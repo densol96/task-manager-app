@@ -7,7 +7,7 @@ import { Modal } from "../../ui/Modal";
 import { Textarea } from "../../ui/Textarea";
 import { createProject } from "../services/apiProjects";
 import ConfirmForm from "./ConfirmForm";
-import { StyledCheckbox } from "../../ui/StyedCheckbox";
+import { StyledCheckbox } from "../../ui/StyledCheckbox";
 import { useQueryClient } from "@tanstack/react-query";
 
 function CreateProjectButton({ size = "small" }) {

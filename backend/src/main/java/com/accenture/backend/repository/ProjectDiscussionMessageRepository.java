@@ -8,4 +8,3 @@ import java.util.List;
 public interface ProjectDiscussionMessageRepository extends JpaRepository<ProjectDiscussionMessage, Integer> {
     List<ProjectDiscussionMessage> findByDiscussionId(Integer discussionId);
 }
-

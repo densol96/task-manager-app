@@ -70,14 +70,14 @@ function Sidebar() {
   return (
     <StyledSidebar>
       <Logo size="mini" />
-      <Heading as="h2">
+      {/* <Heading as="h2">
         <MainText>Task App Pro</MainText>
-      </Heading>
+      </Heading> */}
       <StyledNav>
-        <NavItem to="/dashboard">
+        {/* <NavItem to="/dashboard">
           <MdSpaceDashboard />
           Dashboard
-        </NavItem>
+        </NavItem> */}
         <NavItem to="/projects-all">
           <IoDocumentsSharp />
           All Projects

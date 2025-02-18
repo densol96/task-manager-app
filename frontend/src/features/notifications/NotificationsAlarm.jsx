@@ -25,9 +25,9 @@ function NotificationsAlarm() {
 
   useEffect(() => {
     checkNotifications();
-    // const interval = setInterval(checkNotifications, 10000); // 10s
+    const interval = setInterval(checkNotifications, 10000); // 10s
 
-    // return () => clearInterval(interval);
+    return () => clearInterval(interval);
   }, []);
 
   return (

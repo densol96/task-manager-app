@@ -83,16 +83,12 @@ public class ProjectServiceImpl implements ProjectService {
     public PublicProjectDto getProjectInfo(Long projectId) {
         Project project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new InvalidInputException("project ID", projectId));
-        ProjectConfiguration config = project.getConfig();
-
-        if (config == null)
-            throw new EntityNotFoundException(
-                    "Configuraion associated with project with the id of " + projectId + " is missing.");
-
+        ProjectConfiguration config = getProjectConfig(project);
         Long loggedInUserId = userService.getLoggedInUserId();
 
         if (config.getIsPublic() == false && !projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
             throw new ForbiddenException("You cannot see the private project's information unless you are a member.");
+
         return projectToPublicProjectDto(project, null);
     }
 
@@ -101,10 +97,7 @@ public class ProjectServiceImpl implements ProjectService {
         validateThatLoggedInUserIsOwner(projectId);
         Project project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new EntityNotFoundException("Project", projectId));
-        ProjectConfiguration config = project.getConfig();
-        if (config == null)
-            throw new EntityNotFoundException(
-                    "Configuraion associated with project with the id of " + projectId + " is missing.");
+        ProjectConfiguration config = getProjectConfig(project);
 
         return ProjectConfigDto.builder()
                 .configId(config.getId())
@@ -145,8 +138,10 @@ public class ProjectServiceImpl implements ProjectService {
         Long loggedInUserId = userService.getLoggedInUserId();
         Project project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new EntityNotFoundException("Project", projectId));
-        if (project.getConfig().getIsPublic() == false
-                && !projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
+
+        ProjectConfiguration config = getProjectConfig(project);
+
+        if (config.getIsPublic() == false && !projectMemberRepo.existsByUserIdAndProjectId(loggedInUserId, projectId))
             throw new ForbiddenException("Only members of the project can perform this action");
 
         Long resultsTotal = projectMemberRepo.countAllByProjectId(projectId);
@@ -210,11 +205,7 @@ public class ProjectServiceImpl implements ProjectService {
         existingProject.setTitle(dto.getTitle());
         existingProject.setDescription(dto.getDescription());
 
-        ProjectConfiguration existingConfig = existingProject.getConfig();
-
-        if (existingConfig == null)
-            throw new EntityNotFoundException(
-                    "Configuraion associated with project with the id of " + projectId + " is missing.");
+        ProjectConfiguration existingConfig = getProjectConfig(existingProject);
 
         existingConfig.setIsPublic(dto.getIsPublic());
         existingConfig.setMaxParticipants(dto.getMaxParticipants());
@@ -282,7 +273,7 @@ public class ProjectServiceImpl implements ProjectService {
         interactionRepo.save(newApplication);
 
         ProjectMember owner = getProjectOwner(projectId);
-        String messsage = whoIsMakingApplication.getEmail() + "has appliad to join your project " + project.getTitle()
+        String messsage = whoIsMakingApplication.getEmail() + "has applied to join your project " + project.getTitle()
                 + "#" + projectId;
 
         notificationRepo
@@ -299,7 +290,8 @@ public class ProjectServiceImpl implements ProjectService {
     @Transactional
     public BasicMessageDto makeProjectInvitation(Long projectId, InvitationDto dto) {
         Project existingProject = returnProjectForOwner(projectId);
-        if (existingProject.getMembers().size() >= existingProject.getConfig().getMaxParticipants())
+        ProjectConfiguration existingConfig = getProjectConfig(existingProject);
+        if (existingProject.getMembers().size() >= existingConfig.getMaxParticipants())
             throw new MaxParticipantsReachedException();
 
         User userToBeInvited = userRepository.findUserByEmail(dto.getEmail())
@@ -570,6 +562,16 @@ public class ProjectServiceImpl implements ProjectService {
                 .user(owner.getUser())
                 .build());
         return new BasicMessageDto("You have succesfully left the project.");
+    }
+
+    private ProjectConfiguration getProjectConfig(Project project) {
+        ProjectConfiguration config = project.getConfig();
+
+        if (config == null)
+            throw new EntityNotFoundException(
+                    "Configuraion associated with project with the id of " + project.getId() + " is missing.");
+
+        return config;
     }
 
     private void validateActiveInvitation(ProjectInteraction invitation) {

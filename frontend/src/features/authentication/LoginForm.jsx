@@ -1,6 +1,5 @@
 import { useState } from "react";
 // import axios from "axios";
-import toast from "react-hot-toast";
 import { Navigate } from "react-router";
 import { Form } from "../../ui/Form";
 import { FormLine } from "../../ui/FormLine";
@@ -9,6 +8,7 @@ import Button from "../../ui/Button";
 import Input from "../../ui/Input";
 import axios from "axios";
 import { useAuthContext } from "../../context/AuthContext";
+import toast from "react-hot-toast";
 import { errorParser } from "../../helpers/functions";
 import GoogleProvider from "./GoogleProvider";
 
@@ -56,7 +56,6 @@ export const LoginForm = () => {
       </FormLine>
       <Button>Submit</Button>
       <GoogleProvider type="sign-in" />
-      <AppLink to="/forgot-password">Forgot password</AppLink>
       <AppLink to="/register">Create account</AppLink>
     </Form>
   );

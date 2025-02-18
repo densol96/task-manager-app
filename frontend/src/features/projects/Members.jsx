@@ -41,6 +41,8 @@ function Members() {
 
   if (isLoading || members?.length === 0) return null;
 
+  console.log(members);
+
   const columns = Object.keys(members[0]);
   return (
     <>
@@ -79,7 +81,7 @@ function Members() {
           {members.map((member, rowIndex) => {
             return (
               <tr key={rowIndex}>
-                <td>{member.userId}</td>
+                <td>{member.projectMemberId}</td>
                 <td>{member.firstName}</td>
                 <td>{member.lastName}</td>
                 <td>{formatDate(member.joinDate)}</td>

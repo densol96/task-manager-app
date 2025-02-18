@@ -86,7 +86,6 @@ export const RegisterForm = () => {
       <Button>Submit</Button>
       <GoogleProvider type="sign-up" />
       <AppLink to="/login">Sign in</AppLink>
-      <AppLink to="/forgot-password">Forgot password</AppLink>
     </Form>
   );
 };

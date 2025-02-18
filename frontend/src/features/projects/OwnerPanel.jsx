@@ -17,7 +17,7 @@ import { FormLine } from "../../ui/FormLine";
 import Input from "../../ui/Input";
 import useOwnerInfo from "./useOwnerInfo";
 import { useAuthContext } from "../../context/AuthContext";
-import { StyledCheckbox } from "../../ui/StyedCheckbox";
+import { StyledCheckbox } from "../../ui/StyledCheckbox";
 import { Textarea } from "../../ui/Textarea";
 import { Form } from "../../ui/Form";
 import { Outlet } from "react-router-dom";

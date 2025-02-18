@@ -1,7 +1,6 @@
 package com.accenture.backend.repository;
 
 import com.accenture.backend.entity.TaskLabel;
-import com.accenture.backend.entity.Task;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

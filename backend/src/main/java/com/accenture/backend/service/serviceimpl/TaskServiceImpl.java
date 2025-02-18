@@ -18,6 +18,7 @@ import com.accenture.backend.repository.ProjectRepository;
 import com.accenture.backend.repository.TaskDiscussionMessageRepository;
 import com.accenture.backend.repository.TaskLabelRepository;
 import com.accenture.backend.repository.TaskRepository;
+import com.accenture.backend.service.NotificationService;
 import com.accenture.backend.service.TaskService;
 import com.accenture.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -41,18 +42,22 @@ public class TaskServiceImpl implements TaskService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
 
     private void checkProjectPermissions(Long projectId, boolean canModify, boolean isLabelAction) {
         Long loggedInUserId = userService.getLoggedInUserId();
         ProjectMember member = projectMemberRepository.findByUserIdAndProjectId(loggedInUserId, projectId)
                 .orElseThrow(() -> new RuntimeException("User is not a member of this project"));
 
-        if (canModify && !(member.getProjectRole() == ProjectMember.Role.OWNER || member.getProjectRole() == ProjectMember.Role.MANAGER)) {
-            //throw new RuntimeException("Permission denied. Only OWNER or MANAGER can modify tasks.");
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Permission denied. Only OWNER or MANAGER can modify tasks.");
+        if (canModify && !(member.getProjectRole() == ProjectMember.Role.OWNER
+                || member.getProjectRole() == ProjectMember.Role.MANAGER)) {
+            // throw new RuntimeException("Permission denied. Only OWNER or MANAGER can
+            // modify tasks.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Permission denied. Only OWNER or MANAGER can modify tasks.");
         }
         if (!canModify && !isLabelAction && member.getProjectRole() == ProjectMember.Role.USER) {
-            //throw new RuntimeException("Permission denied. USERS can only view tasks.");
+            // throw new RuntimeException("Permission denied. USERS can only view tasks.");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Permission denied. USERS can only view tasks.");
         }
     }
@@ -105,7 +110,6 @@ public class TaskServiceImpl implements TaskService {
 
         return TaskDto.fromEntity(task);
     }
-
 
     @Override
     public List<TaskDto> getTasksByProject(Long projectId) {
@@ -169,7 +173,6 @@ public class TaskServiceImpl implements TaskService {
             return TaskLabelDto.fromEntity(existingLabel);
         }).orElse(null);
     }
-
 
     @Override
     public boolean deleteFreeLabel(Long labelId) {
@@ -249,10 +252,11 @@ public class TaskServiceImpl implements TaskService {
         }
         checkProjectPermissions(task.getProject().getId(), false, false);
 
-        ProjectMember author = projectMemberRepository.findById(messageDto.getAuthorId()).orElse(null);
-        if (author == null) {
-            throw new RuntimeException("Author not found");
-        }
+        Long loggedIdUserId = userService.getLoggedInUserId();
+
+        ProjectMember author = projectMemberRepository
+                .findByUserIdAndProjectId(loggedIdUserId, task.getProject().getId())
+                .orElseThrow(() -> new RuntimeException("Only project members can comment tasks."));
 
         TaskDiscussionMessage message = messageDto.toEntity();
         message.setTask(task);
@@ -284,6 +288,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    @Transactional
     public TaskWithAssigneesDto assignMemberToTask(Long taskId, Long memberId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found with ID: " + taskId));
@@ -292,6 +297,9 @@ public class TaskServiceImpl implements TaskService {
 
         ProjectMember member = projectMemberRepository.findById(memberId)
                 .orElseThrow(() -> new RuntimeException("Project member not found with ID: " + memberId));
+
+        if (member.getProject().getId() != task.getProject().getId())
+            throw new RuntimeException("This account is not a member");
 
         boolean alreadyAssigned = memberTaskAssignmentRepository.existsByTaskAndMember(task, member);
         if (alreadyAssigned) {
@@ -304,6 +312,8 @@ public class TaskServiceImpl implements TaskService {
         assignment.setAssignedOn(LocalDateTime.now());
 
         memberTaskAssignmentRepository.save(assignment);
+        notificationService.createNotification(member.getUser(), "New task",
+                "You have been assigned a new task #" + task.getId());
         return TaskWithAssigneesDto.fromEntity(task);
     }
 

@@ -6,6 +6,7 @@ import com.accenture.backend.entity.ProjectMember;
 import com.accenture.backend.entity.User;
 import com.accenture.backend.enums.Role;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.EmbeddedDatabaseConnection;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,6 +38,8 @@ public class ProjectRepositoryTest {
     private ProjectMemberRepository projectMemberRepo;
 
     private User user;
+    private Project publicProject;
+    private Project privateProject;
 
     @BeforeEach
     void setUp() {
@@ -45,13 +51,13 @@ public class ProjectRepositoryTest {
                 .role(Role.USER)
                 .build());
 
-        Project publicProject = projectRepo.save(Project.builder()
+        publicProject = projectRepo.save(Project.builder()
                 .title("Public Project")
                 .description("A public project")
                 .build());
         configRepo.save(ProjectConfiguration.builder().project(publicProject).isPublic(true).build());
 
-        Project privateProject = projectRepo.save(Project.builder()
+        privateProject = projectRepo.save(Project.builder()
                 .title("Private Project")
                 .description("A private project")
                 .build());
@@ -59,6 +65,32 @@ public class ProjectRepositoryTest {
 
         projectMemberRepo.save(ProjectMember.builder().user(user).project(privateProject).build());
         projectMemberRepo.save(ProjectMember.builder().user(user).project(publicProject).build());
+    }
+
+    @AfterEach
+    void tearDown() {
+        projectMemberRepo.deleteAll();
+        configRepo.deleteAll();
+        projectRepo.deleteAll();
+        userRepo.deleteAll();
+    }
+
+    @Test
+    public void existsByIdAndConfigIsPublicTrue_ResultIsTrue() {
+        Boolean result = projectRepo.existsByIdAndConfigIsPublicTrue(publicProject.getId());
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    public void existsByIdAndConfigIsPublicTrue_ResultIsFalse() {
+        Boolean result = projectRepo.existsByIdAndConfigIsPublicTrue(privateProject.getId());
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    public void countAllByConfigIsPublicTrue_ReturnsCorrectCount() {
+        Long count = projectRepo.countAllByConfigIsPublicTrue();
+        assertThat(count).isEqualTo(1);
     }
 
     @Test
@@ -70,13 +102,8 @@ public class ProjectRepositoryTest {
         assertThat(result).isNotNull();
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getTitle()).isEqualTo("Public Project");
-    }
-
-    @Test
-    public void countAllByConfigIsPublicTrue_ReturnsCorrectCount() {
-        Long count = projectRepo.countAllByConfigIsPublicTrue();
-        assertThat(count).isEqualTo(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo(publicProject.getTitle());
+        assertThat(result.getContent().get(0).getDescription()).isEqualTo(publicProject.getDescription());
     }
 
     @Test
