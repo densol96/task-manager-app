@@ -8,7 +8,7 @@ Project and Task Management App is a **modern web application** designed to help
 
 - **Frontend**: React, JavaScript, Styled-Components, Context API
 - **Backend**: Spring Boot, Spring Security, Spring Data JPA
-- **Database**: MySQL
+- **Database**: MySQL, Redis, S3
 - **Testing**: JUnit, Mockito
 
 ### 🔐 **Authentication & Security**
