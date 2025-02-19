@@ -1,8 +1,6 @@
 package com.accenture.backend.config.security;
 
-import com.accenture.backend.service.OAuth2Service;
 import com.accenture.backend.util.JwtAuthenticationFilter;
-import lombok.AllArgsConstructor;
 
 import java.util.Arrays;
 

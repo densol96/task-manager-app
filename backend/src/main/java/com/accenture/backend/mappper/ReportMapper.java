@@ -6,38 +6,57 @@ import com.accenture.backend.dto.user.IdNameDto;
 import com.accenture.backend.entity.Evidence;
 import com.accenture.backend.entity.Report;
 import com.accenture.backend.entity.User;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring")
-public interface ReportMapper {
+import org.springframework.stereotype.Component;
+import java.util.stream.Collectors;
 
-    @Mapping(source = "accused", target = "accused", qualifiedByName = "mapUserToIdNameDto")
-    @Mapping(source = "reportType", target = "reportType")
-    @Mapping(source = "reportStatus", target = "reportStatus")
-    @Mapping(source = "createdAt", target = "createdAt")
-    ShortReportInfoDto toShortReportInfoDto(Report report);
+@Component
+public class ReportMapper {
 
-    @Mapping(source = "reporter", target = "reporter", qualifiedByName = "mapUserToIdNameDto")
-    @Mapping(source = "accused", target = "accused", qualifiedByName = "mapUserToIdNameDto")
-    @Mapping(source = "evidences", target = "evidencesUrls", qualifiedByName = "mapEvidencesToUrls")
-    ReportInfoDto toReportInfoDto(Report report);
+    public ShortReportInfoDto toShortReportInfoDto(Report report) {
+        if (report == null) {
+            return null;
+        }
+        return new ShortReportInfoDto(
+                report.getId(),
+                mapUserToIdNameDto(report.getAccused()),
+                report.getReportType(),
+                report.getReportStatus(),
+                report.getCreatedAt()
+        );
+    }
 
-    @Named("mapUserToIdNameDto")
-    default IdNameDto mapUserToIdNameDto(User user) {
+    public ReportInfoDto toReportInfoDto(Report report) {
+        if (report == null) {
+            return null;
+        }
+        return new ReportInfoDto(
+                report.getId(),
+                mapUserToIdNameDto(report.getReporter()),
+                mapUserToIdNameDto(report.getAccused()),
+                report.getReportType(),
+                mapEvidencesToUrls(report.getEvidences()),
+                report.getCreatedAt(),
+                report.getReportStatus()
+        );
+    }
+
+    private IdNameDto mapUserToIdNameDto(User user) {
         if (user == null) {
             return null;
         }
         return new IdNameDto(user.getId(), user.getFirstName() + " " + user.getLastName());
     }
 
-    @Named("mapEvidencesToUrls")
-    default List<String> mapEvidencesToUrls(List<Evidence> evidences) {
+    private List<String> mapEvidencesToUrls(List<Evidence> evidences) {
+        if (evidences == null || evidences.isEmpty()) {
+            return List.of();
+        }
         return evidences.stream()
                 .map(Evidence::getUrl)
-                .toList();
+                .collect(Collectors.toList());
     }
 }
+

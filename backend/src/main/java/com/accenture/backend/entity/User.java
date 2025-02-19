@@ -45,8 +45,11 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     private Role role = Role.NOT_CONFIRMED;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
     private AuthProvider authProvider = AuthProvider.LOCAL;
 
     @Column(name = "created_at")
