@@ -1,8 +1,10 @@
 package com.accenture.backend.service.serviceimpl;
 
+import com.accenture.backend.dto.task.MemberTaskAssignmentDto;
 import com.accenture.backend.dto.task.TaskDiscussionMessageDto;
 import com.accenture.backend.dto.task.TaskDto;
 import com.accenture.backend.dto.task.TaskLabelDto;
+import com.accenture.backend.dto.task.TaskStatusUpdateDto;
 import com.accenture.backend.dto.task.TaskWithAssigneesDto;
 import com.accenture.backend.dto.task.TaskWithLabelsDto;
 import com.accenture.backend.entity.MemberTaskAssignment;
@@ -12,6 +14,8 @@ import com.accenture.backend.entity.Task;
 import com.accenture.backend.entity.TaskDiscussionMessage;
 import com.accenture.backend.entity.TaskLabel;
 import com.accenture.backend.enums.TaskStatus;
+import com.accenture.backend.exception.ResponseStatusExceptionIfProjectMember;
+import com.accenture.backend.exception.ResponseStatusExceptionIfProjectMemberManagerOrOwner;
 import com.accenture.backend.repository.MemberTaskAssignmentRepository;
 import com.accenture.backend.repository.ProjectMemberRepository;
 import com.accenture.backend.repository.ProjectRepository;
@@ -42,27 +46,24 @@ public class TaskServiceImpl implements TaskService {
     private final ProjectMemberRepository projectMemberRepository;
     private final UserService userService;
 
-    private void checkProjectPermissions(Long projectId, boolean canModify, boolean isLabelAction) {
+    private void checkProjectPermissions(Long projectId, boolean requiresManagerOrOwner) {
         Long loggedInUserId = userService.getLoggedInUserId();
-        ProjectMember member = projectMemberRepository.findByUserIdAndProjectId(loggedInUserId, projectId)
-                .orElseThrow(() -> new RuntimeException("User is not a member of this project"));
 
-        if (canModify && !(member.getProjectRole() == ProjectMember.Role.OWNER || member.getProjectRole() == ProjectMember.Role.MANAGER)) {
-            //throw new RuntimeException("Permission denied. Only OWNER or MANAGER can modify tasks.");
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Permission denied. Only OWNER or MANAGER can modify tasks.");
-        }
-        if (!canModify && !isLabelAction && member.getProjectRole() == ProjectMember.Role.USER) {
-            //throw new RuntimeException("Permission denied. USERS can only view tasks.");
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Permission denied. USERS can only view tasks.");
+        ProjectMember member = projectMemberRepository.findByUserIdAndProjectId(loggedInUserId, projectId)
+                .orElseThrow(ResponseStatusExceptionIfProjectMember::new);
+
+        if (requiresManagerOrOwner && !(member.getProjectRole() == ProjectMember.Role.OWNER ||
+                member.getProjectRole() == ProjectMember.Role.MANAGER)) {
+            throw new ResponseStatusExceptionIfProjectMemberManagerOrOwner();
         }
     }
 
     @Override
     public TaskDto createTask(TaskDto taskDto) {
         Project project = projectRepository.findById(taskDto.getProjectId())
-                .orElseThrow(() -> new RuntimeException("Project not found with ID: " + taskDto.getProjectId()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found with ID: " + taskDto.getProjectId()));
 
-        checkProjectPermissions(project.getId(), true, false);
+        checkProjectPermissions(project.getId(), true);
 
         Task task = new Task();
         task.setTitle(taskDto.getTitle());
@@ -77,10 +78,9 @@ public class TaskServiceImpl implements TaskService {
     }
 
     public TaskDto updateTask(Long taskId, TaskDto taskDto) {
-        Task existingTask = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + taskId));
+        Task existingTask = findTaskById(taskId);
 
-        checkProjectPermissions(existingTask.getProject().getId(), true, false);
+        checkProjectPermissions(existingTask.getProject().getId(), true);
 
         existingTask.setTitle(taskDto.getTitle());
         existingTask.setDescription(taskDto.getDescription());
@@ -93,27 +93,22 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public TaskDto updateTaskStatus(Long taskId, String status) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + taskId));
+    public TaskDto updateTaskStatus(Long taskId, TaskStatusUpdateDto statusDto) {
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), true, false);
+        checkProjectPermissions(task.getProject().getId(), true);
 
-        TaskStatus taskStatus = TaskStatus.valueOf(status.toUpperCase());
-        task.setStatus(taskStatus);
+        task.setStatus(statusDto.getStatus());
         taskRepository.save(task);
 
         return TaskDto.fromEntity(task);
     }
 
-
     @Override
     public List<TaskDto> getTasksByProject(Long projectId) {
-        Long loggedInUserId = userService.getLoggedInUserId();
-        boolean isProjectMember = projectMemberRepository.existsByUserIdAndProjectId(loggedInUserId, projectId);
-        if (!isProjectMember) {
-            throw new RuntimeException("Permission denied. User is not a member of this project.");
-        }
+        findProjectById(projectId);
+
+        checkProjectPermissions(projectId, false);
 
         return taskRepository.findByProjectId(projectId).stream()
                 .map(TaskDto::fromEntity)
@@ -122,12 +117,8 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<TaskDto> getTasksByProjectAndStatus(Long projectId, String status) {
-        Long loggedInUserId = userService.getLoggedInUserId();
-        boolean isProjectMember = projectMemberRepository.existsByUserIdAndProjectId(loggedInUserId, projectId);
-
-        if (!isProjectMember) {
-            throw new RuntimeException("Permission denied. User is not a member of this project.");
-        }
+        findProjectById(projectId);
+        checkProjectPermissions(projectId, false);
 
         TaskStatus taskStatus = TaskStatus.valueOf(status.toUpperCase());
         return taskRepository.findByProjectIdAndStatus(projectId, taskStatus).stream()
@@ -137,58 +128,65 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public boolean deleteTask(Long taskId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found"));
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), true, false);
+        checkProjectPermissions(task.getProject().getId(), true);
+
         taskRepository.deleteById(taskId);
         return true;
     }
 
     @Override
-    public TaskLabelDto createLabel(TaskLabelDto taskLabelDto) {
+    public TaskLabelDto createLabel(Long projectId, TaskLabelDto taskLabelDto) {
+        findProjectById(projectId);
+        checkProjectPermissions(projectId, false);
+
         TaskLabel label = taskLabelDto.toEntity();
         label = taskLabelRepository.save(label);
         return TaskLabelDto.fromEntity(label);
     }
 
     @Override
-    public TaskLabelDto updateLabel(Long labelId, TaskLabelDto taskLabelDto) {
-        return taskLabelRepository.findById(labelId).map(existingLabel -> {
-            // Get project ID from the first associated task
-            Long projectId = existingLabel.getTasks().stream()
-                    .findFirst()
-                    .map(task -> task.getProject().getId())
-                    .orElseThrow(() -> new RuntimeException("No associated task found for label"));
+    public TaskLabelDto updateLabel(Long projectId, Long labelId, TaskLabelDto taskLabelDto) {
+        findProjectById(projectId);
 
-            checkProjectPermissions(projectId, false, true);
+        checkProjectPermissions(projectId, false);
 
-            existingLabel.setTitle(taskLabelDto.getTitle());
-            existingLabel.setColor(taskLabelDto.getColor());
-            taskLabelRepository.save(existingLabel);
-            return TaskLabelDto.fromEntity(existingLabel);
-        }).orElse(null);
+        TaskLabel label = findLabelById(labelId);
+
+        if (!label.getTasks().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot update label. It is assigned to one or more tasks.");
+        }
+
+        label.setTitle(taskLabelDto.getTitle());
+        label.setColor(taskLabelDto.getColor());
+
+        taskLabelRepository.save(label);
+
+        return TaskLabelDto.fromEntity(label);
     }
 
-
     @Override
-    public boolean deleteFreeLabel(Long labelId) {
-        if (taskLabelRepository.existsById(labelId)) {
-            taskLabelRepository.deleteById(labelId);
-            return true;
+    public boolean deleteLabel(Long projectId, Long labelId) {
+        checkProjectPermissions(projectId, false);
+
+        TaskLabel label = findLabelById(labelId);
+
+        if (!label.getTasks().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete label. It is assigned to one or more tasks.");
         }
-        return false;
+
+        taskLabelRepository.deleteById(labelId);
+        return true;
     }
 
     @Override
     public TaskWithLabelsDto addLabelToTask(Long taskId, Long labelId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found"));
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), false, true);
+        checkProjectPermissions(task.getProject().getId(), false);
 
-        TaskLabel label = taskLabelRepository.findById(labelId)
-                .orElseThrow(() -> new RuntimeException("Label not found"));
+        TaskLabel label = findLabelById(labelId);
 
         task.getLabels().add(label);
         taskRepository.save(task);
@@ -196,17 +194,15 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public TaskWithLabelsDto removeLabelFromTask(Long taskId, Long labelId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found"));
+    public String removeLabelFromTask(Long taskId, Long labelId) {
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), false, true);
+        checkProjectPermissions(task.getProject().getId(), false);
 
-        TaskLabel label = taskLabelRepository.findById(labelId)
-                .orElseThrow(() -> new RuntimeException("Label not found"));
+        TaskLabel label = findLabelById(labelId);
 
         if (!task.getLabels().contains(label)) {
-            throw new RuntimeException("Label is not associated with this task.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Label is not associated with this task.");
         }
 
         task.getLabels().remove(label);
@@ -216,15 +212,14 @@ public class TaskServiceImpl implements TaskService {
             taskLabelRepository.delete(label);
         }
 
-        return TaskWithLabelsDto.fromEntity(task);
+        return "Label with ID " + labelId + " was successfully removed from Task with ID " + taskId;
     }
 
     @Override
     public List<TaskLabelDto> getLabelsForTask(Long taskId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + taskId));
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), false, true);
+        checkProjectPermissions(task.getProject().getId(), false);
 
         return task.getLabels().stream()
                 .map(TaskLabelDto::fromEntity)
@@ -233,25 +228,23 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskWithLabelsDto getTaskWithLabels(Long taskId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + taskId));
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), false, true);
+        checkProjectPermissions(task.getProject().getId(), false);
 
         return TaskWithLabelsDto.fromEntity(task);
     }
 
     @Override
     public TaskDiscussionMessageDto addMessageToTask(Long taskId, TaskDiscussionMessageDto messageDto) {
-        Task task = taskRepository.findById(taskId).orElse(null);
-        if (task == null) {
-            throw new RuntimeException("Task not found");
-        }
-        checkProjectPermissions(task.getProject().getId(), false, false);
+
+        Task task = findTaskById(taskId);
+
+        checkProjectPermissions(task.getProject().getId(), false);
 
         ProjectMember author = projectMemberRepository.findById(messageDto.getAuthorId()).orElse(null);
         if (author == null) {
-            throw new RuntimeException("Author not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found");
         }
 
         TaskDiscussionMessage message = messageDto.toEntity();
@@ -265,9 +258,9 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public boolean deleteMessage(Long messageId) {
         TaskDiscussionMessage message = taskDiscussionMessageRepository.findById(messageId)
-                .orElseThrow(() -> new RuntimeException("Message not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Message not found"));
 
-        checkProjectPermissions(message.getTask().getProject().getId(), true, false);
+        checkProjectPermissions(message.getTask().getProject().getId(), false);
 
         taskDiscussionMessageRepository.deleteById(messageId);
         return true;
@@ -275,23 +268,22 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<TaskDiscussionMessageDto> getAllMessagesForTask(Long taskId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found"));
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), false, false);
+        checkProjectPermissions(task.getProject().getId(), false);
+
         return taskDiscussionMessageRepository.findByTaskId(taskId).stream()
                 .map(TaskDiscussionMessageDto::fromEntity).collect(Collectors.toList());
     }
 
     @Override
     public TaskWithAssigneesDto assignMemberToTask(Long taskId, Long memberId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + taskId));
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), true, false);
+        checkProjectPermissions(task.getProject().getId(), true);
 
         ProjectMember member = projectMemberRepository.findById(memberId)
-                .orElseThrow(() -> new RuntimeException("Project member not found with ID: " + memberId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project member not found with ID: " + memberId));
 
         boolean alreadyAssigned = memberTaskAssignmentRepository.existsByTaskAndMember(task, member);
         if (alreadyAssigned) {
@@ -309,27 +301,45 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void unassignMemberFromTask(Long taskId, Long memberId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + taskId));
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), true, false);
+        checkProjectPermissions(task.getProject().getId(), true);
 
         ProjectMember member = projectMemberRepository.findById(memberId)
-                .orElseThrow(() -> new RuntimeException("Project member not found with ID: " + memberId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project member not found with ID: " + memberId));
 
         MemberTaskAssignment assignment = memberTaskAssignmentRepository.findByTaskAndMember(task, member)
-                .orElseThrow(() -> new RuntimeException("Member is not assigned to this task."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member is not assigned to this task."));
 
         memberTaskAssignmentRepository.delete(assignment);
     }
 
     @Override
-    public TaskWithAssigneesDto getAllAssigneesForTask(Long taskId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found with ID: " + taskId));
+    public List<MemberTaskAssignmentDto> getAllAssigneesForTask(Long taskId) {
+        Task task = findTaskById(taskId);
 
-        checkProjectPermissions(task.getProject().getId(), false, false);
+        checkProjectPermissions(task.getProject().getId(), false);
 
-        return TaskWithAssigneesDto.fromEntity(task);
+        return task.getMemberAssignments().stream()
+                .map(MemberTaskAssignmentDto::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Task findTaskById(Long taskId) {
+        return taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found with ID: " + taskId));
+    }
+
+    @Override
+    public TaskLabel findLabelById(Long labelId) {
+        return taskLabelRepository.findById(labelId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Label not found with ID: " + labelId));
+    }
+
+    @Override
+    public void findProjectById(Long projectId) {
+        projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found with ID: " + projectId));
     }
 }

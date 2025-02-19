@@ -2,10 +2,12 @@ package com.accenture.backend.controller;
 
 import com.accenture.backend.entity.TaskDiscussionMessage;
 import com.accenture.backend.service.serviceimpl.TaskDiscussionMessageServiceImpl;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+@Hidden
 @RestController
 @RequestMapping("/tasks/{taskId}/comments")
 public class TaskDiscussionMessageController {
